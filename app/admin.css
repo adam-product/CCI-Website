@@ -1,0 +1,410 @@
+/* Admin typography and data tables share a readable scale across modules. */
+:is(.admin-shell, .admin-login) {
+  --admin-text: 0.9375rem;
+  --admin-meta: 0.8125rem;
+  --admin-muted: #4d6377;
+  font-size: var(--admin-text);
+  line-height: 1.55;
+}
+
+.admin-sidebar nav button,
+.admin-shell .admin-topbar,
+.admin-shell .admin-page-heading p,
+.admin-shell .admin-panel > p,
+.admin-shell .quick-action p,
+.admin-shell .feedback,
+.admin-shell label,
+.admin-shell .table-search input {
+  font-size: var(--admin-text);
+}
+
+.admin-sidebar nav button {
+  padding-block: 12px;
+}
+
+.admin-shell :is(.sidebar-label, .table-sub, .form-note, .eyebrow),
+.admin-shell .sidebar-bottom :is(strong, small),
+.admin-shell .editor-panel label small,
+.admin-shell .publish-panel :is(dl, p),
+.admin-shell .admin-topbar > a,
+.admin-shell .admin-sidebar nav button > span,
+.admin-login :is(.eyebrow, small) {
+  font-size: var(--admin-meta);
+  color: var(--admin-muted);
+}
+
+.admin-shell .sidebar-bottom small {
+  overflow-wrap: anywhere;
+}
+
+.admin-shell .admin-sidebar nav button.selected > span:not(.enquiries-count) {
+  color: inherit;
+}
+
+.admin-shell .admin-sidebar nav .enquiries-count {
+  color: var(--navy);
+}
+
+.admin-shell .dashboard-stats > button > span {
+  font-size: var(--admin-text);
+  color: var(--admin-muted);
+}
+
+.admin-shell .admin-page-heading p,
+.admin-shell .quick-action p,
+.admin-shell .publish-panel dt,
+.admin-shell .media-grid p,
+.admin-shell .upload-panel p {
+  color: var(--admin-muted);
+}
+
+.admin-shell :is(.button, .text-link, .danger-link, .table-link),
+.admin-shell .settings-shortcuts a,
+.admin-shell .language-tabs button,
+.admin-shell .editor-toolbar > button,
+.admin-shell .section-editor > div:first-child,
+.admin-shell .media-grid :is(p, label, input),
+.admin-shell .upload-panel :is(p, label, input),
+.admin-shell .empty-state p,
+.admin-login :is(.button, .text-link) {
+  font-size: 0.875rem;
+}
+
+.admin-shell .editor-panel h2,
+.admin-shell .admin-panel h2,
+.admin-shell .publish-panel h3 {
+  font-size: 1.25rem;
+}
+
+.admin-shell .admin-panel h3 {
+  font-size: 1rem;
+}
+
+.admin-shell .publish-panel .button {
+  justify-content: center;
+  text-align: center;
+}
+
+.admin-shell .publish-panel p {
+  line-height: 1.65;
+}
+
+.admin-shell .table-search input {
+  box-shadow: none;
+}
+
+.admin-shell .table-search input:focus-visible {
+  box-shadow: none;
+}
+
+.admin-shell .badge {
+  display: inline-flex;
+  min-height: 27px;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: var(--admin-meta);
+  font-weight: 600;
+  color: #775526;
+}
+
+.admin-shell .badge.published {
+  color: #275c3c;
+}
+
+.admin-shell .table-wrap {
+  border: 1px solid #dce5ed;
+  border-radius: 14px;
+  background: #fff;
+  scrollbar-color: #a4b8ca #f1f5f8;
+}
+
+.admin-data-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: start;
+}
+
+.admin-data-table thead th {
+  background: #edf3f8;
+  color: #213e59;
+  padding: 13px 16px;
+  text-align: start;
+  font-size: 0.875rem;
+  font-weight: 650;
+  border-bottom: 1px solid #dce5ed;
+}
+
+.admin-data-table tbody td {
+  padding: 15px 16px;
+  font-size: var(--admin-text);
+  line-height: 1.5;
+  color: var(--admin-muted);
+  border-bottom-color: #e8eef3;
+  vertical-align: middle;
+}
+
+.admin-data-table td strong {
+  font-size: inherit;
+  color: var(--navy);
+}
+
+.admin-data-table tbody tr:hover,
+.admin-data-table tbody tr:focus-within {
+  background: #f6f9fc;
+}
+
+.admin-data-table tbody td:first-child {
+  min-width: 12rem;
+  overflow-wrap: anywhere;
+}
+
+.admin-data-table :is(th, td).table-actions {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.admin-data-table .table-action-button {
+  display: inline-flex;
+  min-height: 42px;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid #cddbe7;
+  background: #f1f6fb;
+  color: var(--navy);
+  font-size: 0.875rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.admin-data-table .table-action-button:hover {
+  background: #e2edf7;
+  border-color: #a9bfd3;
+}
+
+.enquiries-table {
+  min-width: 52rem;
+}
+
+.enquiries-scroll {
+  container-type: inline-size;
+}
+
+.enquiries-table thead th,
+.enquiries-table tbody td {
+  padding-inline: 12px;
+}
+
+.enquiries-table td {
+  overflow-wrap: anywhere;
+}
+
+.enquiries-table tbody td:first-child {
+  min-width: 9rem;
+}
+
+.enquiries-table td:nth-child(3) {
+  min-width: 10.75rem;
+}
+
+.enquiries-table td:nth-child(6) {
+  white-space: nowrap;
+}
+
+.enquiries-table .table-actions {
+  position: sticky;
+  inset-inline-end: 0;
+}
+
+.enquiries-table tbody .table-actions {
+  background: white;
+}
+
+.enquiries-table tr:is(:hover, :focus-within) td.table-actions {
+  background: #f6f9fc;
+}
+
+.enquiry-email {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.enquiry-preview {
+  display: -webkit-box;
+  min-width: 7rem;
+  max-width: 22rem;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.enquiry-detail > td {
+  background: #f6f9fc;
+}
+
+.enquiry-detail-content {
+  position: sticky;
+  inset-inline-start: 14px;
+  width: min(70ch, calc(100cqi - 32px));
+  color: var(--navy);
+}
+
+.enquiry-detail form {
+  max-width: 31rem;
+  margin-top: 20px;
+}
+
+.admin-shell .staff-form {
+  display: grid;
+  grid-template-columns:
+    minmax(180px, 1fr) minmax(175px, 15.5rem) minmax(112px, auto)
+    auto;
+  align-items: end;
+  gap: 16px;
+}
+
+.admin-shell .staff-form label {
+  min-width: 0;
+}
+
+.staff-form > .button {
+  min-height: 46px;
+  white-space: nowrap;
+}
+
+.staff-toggle-field {
+  display: grid;
+  gap: 6px;
+}
+
+.staff-toggle-field .staff-toggle-control {
+  min-height: 46px;
+}
+
+.admin-shell .staff-toggle-control {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 9px;
+  width: max-content;
+  max-width: 100%;
+}
+
+.staff-password-option {
+  grid-column: 1 / -1;
+}
+
+.staff-switch[data-slot="switch"] {
+  width: 44px;
+  height: 25px;
+  border: 1px solid transparent;
+  background: #64788b;
+}
+
+.staff-switch[data-slot="switch"][data-state="checked"] {
+  background: var(--navy);
+}
+
+.staff-switch [data-slot="switch-thumb"] {
+  width: 19px;
+  height: 19px;
+  background: white;
+  translate: 2px 0;
+  transition: translate 180ms ease;
+}
+
+.staff-switch[data-state="checked"] [data-slot="switch-thumb"] {
+  translate: 21px 0;
+}
+
+.portal-lock {
+  display: grid;
+  min-width: 36px;
+  min-height: 36px;
+  margin-left: auto;
+  place-items: center;
+  border-radius: 50%;
+  background: #edf3f8;
+}
+
+.staff-unlock {
+  display: grid;
+  max-width: 26rem;
+  gap: 12px;
+  margin-bottom: 1rem;
+}
+
+.staff-unlock > .button {
+  justify-self: start;
+}
+
+.staff-password-dialog[data-slot="dialog-content"] {
+  border-radius: 20px;
+  background: white;
+  color: var(--navy);
+}
+
+.staff-password-dialog [data-slot="input"] {
+  font-family: ui-monospace, monospace;
+  font-size: 15px;
+}
+
+.staff-password-dialog > .button {
+  justify-self: end;
+  border-radius: 999px;
+}
+
+.card-image-editor {
+  margin: 1.5rem 0;
+  padding: clamp(16px, 2vw, 26px);
+  border: 1px solid #dce4ea;
+  border-radius: 1rem;
+  background: #f7f9fb;
+}
+
+.card-image-editor img {
+  width: min(100%, 360px);
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  margin-top: 1rem;
+  border-radius: 12px;
+}
+
+.card-image-upload {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+}
+
+.card-image-upload label {
+  flex: 1 1 230px;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+@media (max-width: 1050px) {
+  .admin-shell .staff-form {
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  }
+
+  .staff-form > .button {
+    justify-self: start;
+  }
+}
+
+@media (max-width: 600px) {
+  .admin-shell .staff-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-data-table thead th,
+  .admin-data-table tbody td {
+    padding-inline: 12px;
+  }
+  .admin-data-table tbody td:first-child {
+    min-width: 10rem;
+  }
+}
