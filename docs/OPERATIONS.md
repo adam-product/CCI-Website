@@ -27,7 +27,19 @@ The integration suite starts the built Worker on localhost with disposable datab
 
 ## Vercel
 
-Deploy the checkout as a Next.js project with Node 22. Configure the server-side variables in `.env.example` in the Vercel project. Provide a Cloudflare API token scoped to D1 for the account and R2 credentials scoped to the private media bucket.
+Deploy the checkout as a Next.js project with Node 22. Configure the server-side variables in `.env.example` in the Vercel project.
+
+### Supabase
+
+1. In Supabase, select **Connect → Transaction pooler** and copy the connection string. Replace the password placeholder with the database password, URL-encoding characters such as `@` if needed. Save it in Vercel as `POSTGRES_URL`.
+2. Save the Supabase project URL as `SUPABASE_URL`. From **Project Settings → API Keys → Secret keys**, save a server key as `SUPABASE_SECRET_KEY`. Set both the connection string and secret key as Vercel secrets and select the Production environment for all three values.
+3. The next production build prepares the private `cci` database schema and the `cci-media` bucket. The database installer is additive and can also be run with `npm run db:supabase` using those same variables.
+
+For a new database, the application starts with its bundled public content. If transferring an existing CMS, import the selected records and their media using the same IDs before serving production traffic. Treat drafts, enquiries, uploaded originals and passwords as sensitive. Accounts that previously signed in through the host must receive new CCI credentials.
+
+### Cloudflare
+
+For Cloudflare storage, provide a Cloudflare API token scoped to D1 for the account and R2 credentials scoped to the private media bucket.
 
 Connect the original database and bucket if the operator has direct credentials. Otherwise, apply the versioned SQL migrations to an operator-owned D1 database and transfer the approved database export and referenced R2 objects before launch. Preserve content and object IDs so existing image links and publication state carry over. Use separate resources for previews that may receive write access. The Vercel deployment accepts new images up to 4 MB.
 

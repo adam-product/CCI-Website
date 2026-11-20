@@ -32,7 +32,7 @@ export async function seed() {
     initialContent.map((c) =>
       db
         .prepare(
-          "INSERT OR IGNORE INTO content (id,kind,draft,published,version,updated_at) VALUES (?,?,?,?,1,?)",
+          "INSERT INTO content (id,kind,draft,published,version,updated_at) VALUES (?,?,?,?,1,?) ON CONFLICT(id) DO NOTHING",
         )
         .bind(c.id, c.kind, JSON.stringify(c), JSON.stringify(c), now),
     ),
@@ -120,7 +120,7 @@ export async function rateLimit(key: string, max: number, seconds: number) {
   const db = database();
   const row: any = await db
     .prepare(
-      "INSERT INTO limits(key,count,expires) VALUES (?,1,?) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN expires < ? THEN 1 ELSE count+1 END, expires=CASE WHEN expires < ? THEN ? ELSE expires END RETURNING count",
+      "INSERT INTO limits(key,count,expires) VALUES (?,1,?) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN limits.expires < ? THEN 1 ELSE limits.count+1 END, expires=CASE WHEN limits.expires < ? THEN ? ELSE limits.expires END RETURNING count",
     )
     .bind(key, now + seconds * 1000, now, now, now + seconds * 1000)
     .first();

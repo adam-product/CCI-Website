@@ -373,7 +373,7 @@ async function handle(req: Request, { params }: any) {
     if (key === "enquiries/count" && req.method === "GET") {
       await authorize("enquiries");
       const count = await db
-        .prepare("SELECT COUNT(*) AS count FROM enquiries WHERE status = 'New'")
+        .prepare("SELECT CAST(COUNT(*) AS INTEGER) AS count FROM enquiries WHERE status = 'New'")
         .first<number>("count");
       return json({ count: count ?? 0 });
     }
@@ -413,7 +413,7 @@ async function handle(req: Request, { params }: any) {
           await db
             .prepare(
               `SELECT staff.email, role, active,
-        staff_credentials.email IS NOT NULL AS has_password
+        CASE WHEN staff_credentials.email IS NOT NULL THEN 1 ELSE 0 END AS has_password
         FROM staff LEFT JOIN staff_credentials USING(email) ORDER BY staff.email`,
             )
             .all<{ email: string; role: string; active: number; has_password: number }>()
