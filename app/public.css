@@ -2034,6 +2034,39 @@ html {
 .settings-section-head h3 {
   margin: 0;
 }
+
+.editorial-body {
+  white-space: pre-line;
+}
+
+:is(.custom-section, .brief-editorial article, .editorial-sections article, #contact-form)[id] {
+  scroll-margin-top: 8rem;
+}
+
+.brief-editorial > article {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+  gap: clamp(1.1rem, 4vw, 4rem);
+  margin-bottom: 2.5rem;
+  padding-bottom: 2.5rem;
+}
+
+.brief-editorial > article > div {
+  min-width: 0;
+}
+
+.brief-editorial .editorial-body {
+  color: var(--muted);
+}
+
+.impact-at-glance h2 {
+  margin-bottom: 1.4rem;
+}
+
+@media (max-width: 760px) {
+  .brief-editorial > article {
+    grid-template-columns: 1fr;
+  }
+}
 .settings-section .form-note {
   margin: 10px 0 18px;
 }

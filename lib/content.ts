@@ -1,3 +1,5 @@
+import { briefMetrics, briefPages } from "./cci-brief-content";
+
 export const socialChannels = {
   facebook: "Facebook",
   instagram: "Instagram",
@@ -85,7 +87,7 @@ const base = (
   order: 0,
   sections: [],
 });
-export const initialContent: Content[] = [
+const originalContent: Content[] = [
   {
     ...base(
       "home",
@@ -348,6 +350,57 @@ export const initialContent: Content[] = [
     image: "/brand/cci-logo.webp",
     alt: "Click Cross Initiative. Click Safe. Cross Scams.",
   },
+];
+
+export function applyBriefContent(content: Content): Content {
+  const update = Object.hasOwn(briefPages, content.id)
+    ? briefPages[content.id]
+    : undefined;
+  if (!update) {
+    const metric = briefMetrics.find((entry) => entry.id === content.id);
+    return metric
+      ? { ...content, ...metric, sections: content.sections }
+      : content;
+  }
+  const { sections, socialLinks, ...fields } = update;
+  const updated = { ...content, ...fields };
+  if (socialLinks)
+    updated.socialLinks = { ...content.socialLinks, ...socialLinks };
+  if (!sections?.length) return updated;
+
+  const previous = new Map(
+    content.sections.map((section) => [section.id, section]),
+  );
+  updated.sections = sections.map((section) => {
+    const existing = previous.get(section.id);
+    previous.delete(section.id);
+    return existing
+      ? {
+          ...existing,
+          ...section,
+          image: section.image || existing.image,
+          ...(section.href ? {} : { href: existing.href, cta: existing.cta }),
+        }
+      : section;
+  });
+  for (const section of [...previous.values()].sort(
+    (a, b) => a.order - b.order,
+  )) {
+    const retired =
+      content.id === "way-way-shaung" &&
+      ["dna", "learning", "watch"].includes(section.id);
+    updated.sections.push({
+      ...section,
+      order: updated.sections.length,
+      visible: !retired && section.visible,
+    });
+  }
+  return updated;
+}
+
+export const initialContent = [
+  ...originalContent.map(applyBriefContent),
+  ...briefMetrics,
 ];
 export function textFor(value: LocaleText | undefined, lang: string) {
   return value?.[lang === "my" ? "my" : "en"] || value?.en || "";

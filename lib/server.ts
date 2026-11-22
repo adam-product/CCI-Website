@@ -6,11 +6,13 @@ import {
   readPortalToken,
 } from "./staff-password";
 import {
+  applyBriefContent,
   initialContent,
   rolePermissions,
   socialChannels,
   type Content,
 } from "./content";
+import { briefMetrics, briefPages, briefRevision } from "./cci-brief-content";
 export { database };
 export function siteOrigin() {
   const configured = runtimeSetting("CCI_SITE_URL");
@@ -25,18 +27,67 @@ export function siteOrigin() {
 }
 export async function seed() {
   const db = database();
-  if (await db.prepare("SELECT id FROM content WHERE id='site'").first())
-    return;
-  const now = new Date().toISOString();
-  await db.batch(
-    initialContent.map((c) =>
-      db
-        .prepare(
-          "INSERT INTO content (id,kind,draft,published,version,updated_at) VALUES (?,?,?,?,1,?) ON CONFLICT(id) DO NOTHING",
+  const revisionApplied = () =>
+    db.prepare("SELECT id FROM audit WHERE id=?").bind(briefRevision).first();
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (await revisionApplied()) return;
+    const now = new Date().toISOString();
+    const { results } = await db
+      .prepare("SELECT id,draft,published,version FROM content")
+      .all<{
+        id: string;
+        draft: string;
+        published: string | null;
+        version: number;
+      }>();
+    const rows = new Map(results.map((row) => [row.id, row]));
+    const hasSite = rows.has("site");
+    const candidates = hasSite
+      ? initialContent.filter(
+          (item) =>
+            Object.hasOwn(briefPages, item.id) ||
+            briefMetrics.some((metric) => metric.id === item.id),
         )
-        .bind(c.id, c.kind, JSON.stringify(c), JSON.stringify(c), now),
-    ),
-  );
+      : initialContent;
+    const statements = candidates.flatMap((item) => {
+      const row = rows.get(item.id);
+      if (!row) {
+        const data = JSON.stringify(item);
+        return [
+          db
+            .prepare(
+              "INSERT INTO content (id,kind,draft,published,version,updated_at) SELECT ?,?,?,?,1,? WHERE NOT EXISTS (SELECT 1 FROM audit WHERE id=?) ON CONFLICT(id) DO NOTHING",
+            )
+            .bind(item.id, item.kind, data, data, now, briefRevision),
+        ];
+      }
+      const draft = JSON.stringify(applyBriefContent(JSON.parse(row.draft)));
+      const published = row.published
+        ? JSON.stringify(applyBriefContent(JSON.parse(row.published)))
+        : null;
+      if (draft === row.draft && published === row.published) return [];
+      return [
+        db
+          .prepare(
+            "UPDATE content SET draft=?,published=?,version=version+1,updated_at=? WHERE id=? AND version=? AND NOT EXISTS (SELECT 1 FROM audit WHERE id=?)",
+          )
+          .bind(draft, published, now, row.id, row.version, briefRevision),
+      ];
+    });
+    if (statements.length) {
+      const writes = await db.batch(statements);
+      if (writes.some(({ meta }) => !meta.changes)) continue;
+    }
+    await db
+      .prepare(
+        "INSERT INTO audit (id,actor,action,target,created_at) VALUES (?,'CCI content release','Apply editorial brief','Website',?) ON CONFLICT(id) DO NOTHING",
+      )
+      .bind(briefRevision, now)
+      .run();
+    return;
+  }
+  if (!(await revisionApplied()))
+    throw new Error("The CCI content release needs a retry");
 }
 export async function publicContent() {
   await seed();

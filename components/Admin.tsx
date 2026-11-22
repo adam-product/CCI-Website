@@ -941,7 +941,7 @@ export default function Admin() {
                             </span>
                           </div>
                           <p className="form-note">
-                            Published details appear on Contact Us. Messages are
+                            Published details appear on Work With Us. Messages are
                             reviewed in the Enquiries inbox.
                           </p>
                           <div className="field-grid">
@@ -999,7 +999,7 @@ export default function Admin() {
                               target="_blank"
                               rel="noopener"
                             >
-                              View Contact Us
+                              View Work With Us
                             </a>
                             <a
                               href="/en/privacy"

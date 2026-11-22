@@ -73,6 +73,54 @@ try {
     );
   }
 
+  const publicCopy = (await call("public")).body;
+  assert.equal(
+    publicCopy.find((item) => item.id === "home").title.en,
+    "Click Safe. Cross Scams",
+  );
+  assert.equal(
+    publicCopy.find((item) => item.id === "way-way-shaung").status,
+    "Active",
+  );
+  assert.ok(
+    publicCopy
+      .find((item) => item.id === "about")
+      .sections.find((section) => section.id === "mission").body.my,
+  );
+  assert.equal(
+    publicCopy.find((item) => item.id === "animation-reach").value,
+    "13M+",
+  );
+  const homeRecord = await db
+    .prepare("SELECT * FROM content WHERE id='home'")
+    .first();
+  const legacyDraft = JSON.parse(homeRecord.draft);
+  legacyDraft.title.en = "Previous homepage";
+  legacyDraft.image = "/brand/cci-logo.webp";
+  legacyDraft.alt = "Click Cross Initiative logo";
+  await db.batch([
+    db
+      .prepare("UPDATE content SET draft=? WHERE id='home'")
+      .bind(JSON.stringify(legacyDraft)),
+    db.prepare("DELETE FROM audit WHERE action='Apply editorial brief'"),
+  ]);
+  await call("public");
+  const revised = await db
+    .prepare("SELECT draft,version FROM content WHERE id='home'")
+    .first();
+  assert.equal(JSON.parse(revised.draft).title.en, "Click Safe. Cross Scams");
+  assert.equal(JSON.parse(revised.draft).image, "/brand/cci-logo.webp");
+  assert.equal(revised.version, homeRecord.version + 1);
+  await call("public");
+  assert.equal(
+    (await db.prepare("SELECT version FROM content WHERE id='home'").first())
+      .version,
+    revised.version,
+  );
+  console.log(
+    "PASS The bilingual brief updates the public content and CMS once, preserving existing images",
+  );
+
   const provision = {
     email: staff.email,
     role: "publisher",

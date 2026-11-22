@@ -45,7 +45,7 @@ const nav = [
   ["initiatives", "Our Initiatives", "ကျွန်ုပ်တို့၏ အစီအစဉ်များ"],
   ["impact", "Impact", "အကျိုးသက်ရောက်မှု"],
   ["about", "About Us", "ကျွန်ုပ်တို့အကြောင်း"],
-  ["contact", "Contact Us", "ဆက်သွယ်ရန်"],
+  ["contact", "Work With Us", "ကျွန်ုပ်တို့နှင့် ပူးပေါင်းရန်"],
 ];
 const editorialHeroes: Partial<
   Record<string, { label: [string, string]; image: string; alt: string }>
@@ -116,6 +116,8 @@ export default function Website({
   const tr = (v: any) => textFor(v, lang);
   const ui = (en: string, my: string) => (lang === "my" ? my : en);
   const href = (p = "") => `/${lang}${p ? "/" + p : ""}`;
+  const contentHref = (url: string) =>
+    url.replace(/^\/(?:en|my)(?=\/|$)/, `/${lang}`);
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
@@ -243,7 +245,7 @@ export default function Website({
         />
       )}
       {section.href && tr(section.cta) && (
-        <a className="text-link" href={section.href}>
+        <a className="text-link" href={contentHref(section.href)}>
           {tr(section.cta)}
           <Arrow />
         </a>
@@ -252,12 +254,32 @@ export default function Website({
   );
   const additionalSections = (items: Section[]) =>
     items.map((section) => (
-      <section className="section-pad custom-section" key={section.id}>
+      <section
+        className="section-pad custom-section"
+        id={section.id}
+        key={section.id}
+      >
         <h2>{tr(section.heading)}</h2>
-        {tr(section.body) && <p>{tr(section.body)}</p>}
+        {tr(section.body) && (
+          <p className="editorial-body">{tr(section.body)}</p>
+        )}
         {sectionExtras(section)}
       </section>
     ));
+  const editorialRows = (items: Section[]) =>
+    items.length > 0 && (
+      <section className="section-pad editorial-sections brief-editorial">
+        {items.map((section) => (
+          <article id={section.id} key={section.id}>
+            <h2>{tr(section.heading)}</h2>
+            <div>
+              <p className="editorial-body">{tr(section.body)}</p>
+              {sectionExtras(section)}
+            </div>
+          </article>
+        ))}
+      </section>
+    );
   const pageLink = page?.url && page.kind === "page" && page.id !== "home" && (
     <a className="button navy page-outbound" href={page.url}>
       {ui("Learn more", "ပိုမိုလေ့လာရန်")}
@@ -330,9 +352,7 @@ export default function Website({
                 : "initiative-visual"
           }
         >
-          {image && (
-            <img src={image} alt={alt || ""} loading="lazy" />
-          )}
+          {image && <img src={image} alt={alt || ""} loading="lazy" />}
         </div>
         <div className="card-top">{statusBadge(item.status)}</div>
         <div className="initiative-caption">
@@ -375,7 +395,10 @@ export default function Website({
           )}
         </div>
         {(section.href || publishedIds.has("contact")) && (
-          <a className="button cream" href={section.href || href("contact")}>
+          <a
+            className="button cream"
+            href={section.href ? contentHref(section.href) : href("contact")}
+          >
             {tr(section.cta) || ui("Let’s connect", "ဆက်သွယ်ကြစို့")}
             <Arrow />
           </a>
@@ -433,6 +456,46 @@ export default function Website({
       )}
     </>
   );
+  const impactMetrics = content
+    .filter((item) => item.kind === "impact")
+    .sort((a, b) => a.order - b.order);
+  const metricsGrid = impactMetrics.length > 0 && (
+    <div className="metrics-grid">
+      {impactMetrics.map((metric) => (
+        <article key={metric.id}>
+          <span className="metric">{metric.value}</span>
+          <h3>{tr(metric.title)}</h3>
+          <p>{tr(metric.description)}</p>
+          {metric.period &&
+            metric.period !== "Reporting period not specified" && (
+              <small>{metric.period}</small>
+            )}
+          {metric.sections
+            .filter((section) => section.visible)
+            .sort((a, b) => a.order - b.order)
+            .map((section) => (
+              <div key={section.id}>
+                <h4>{tr(section.heading)}</h4>
+                <p className="editorial-body">{tr(section.body)}</p>
+                {sectionExtras(section)}
+              </div>
+            ))}
+        </article>
+      ))}
+    </div>
+  );
+  const impactAtGlance = metricsGrid && (
+    <section
+      className="section-pad impact-at-glance"
+      aria-label={ui("Our Impact at a Glance", "ကျွန်ုပ်တို့၏ အကျိုးသက်ရောက်မှု")}
+    >
+      <h2>{ui("Our Impact at a Glance", "ကျွန်ုပ်တို့၏ အကျိုးသက်ရောက်မှု")}</h2>
+      {metricsGrid}
+    </section>
+  );
+  const hasBriefPillars =
+    pageId === "way-way-shaung" &&
+    learningSections.some((section) => section.id === "pillars");
   async function sendContact(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setFormState({ busy: true, error: "", success: "" });
@@ -578,7 +641,11 @@ export default function Website({
                       {(page.secondaryUrl || publishedIds.has("about")) && (
                         <a
                           className="text-link"
-                          href={page.secondaryUrl || href("about")}
+                          href={
+                            page.secondaryUrl
+                              ? contentHref(page.secondaryUrl)
+                              : href("about")
+                          }
                         >
                           {tr(page.secondaryCtaLabel) ||
                             ui("About us", "ကျွန်ုပ်တို့အကြောင်း")}
@@ -593,35 +660,37 @@ export default function Website({
             </div>
             {!sections.some((section) => section.id === "intro") &&
               homeFeatures}
-            {sections.map((section) =>
-              section.id === "cta" ? (
-                closing(section)
-              ) : section.id === "intro" ? (
-                <Fragment key={section.id}>
-                  <section className="intro section-pad">
-                    <div>
-                      <span className="eyebrow">
-                        {ui("WHO WE ARE", "ကျွန်ုပ်တို့အကြောင်း")}
-                      </span>
-                      <h2>{tr(section.heading)}</h2>
-                    </div>
-                    <div className="intro-body">
-                      <p>{tr(section.body)}</p>
-                      {sectionExtras(section)}
-                      {!section.href && publishedIds.has("about") && (
-                        <a className="text-link" href={href("about")}>
-                          {ui("Get to know CCI", "CCI အကြောင်း လေ့လာရန်")}
-                          <Arrow />
-                        </a>
-                      )}
-                    </div>
-                  </section>
-                  {homeFeatures}
-                </Fragment>
-              ) : (
-                additionalSections([section])
-              ),
-            )}
+            {sections
+              .filter((section) => section.id !== "cta")
+              .map((section) =>
+                section.id === "intro" ? (
+                  <Fragment key={section.id}>
+                    <section className="intro section-pad" id={section.id}>
+                      <div>
+                        <span className="eyebrow">
+                          {ui("WHO WE ARE", "ကျွန်ုပ်တို့အကြောင်း")}
+                        </span>
+                        <h2>{tr(section.heading)}</h2>
+                      </div>
+                      <div className="intro-body">
+                        <p className="editorial-body">{tr(section.body)}</p>
+                        {sectionExtras(section)}
+                        {!section.href && publishedIds.has("about") && (
+                          <a className="text-link" href={href("about")}>
+                            {ui("Get to know CCI", "CCI အကြောင်း လေ့လာရန်")}
+                            <Arrow />
+                          </a>
+                        )}
+                      </div>
+                    </section>
+                    {homeFeatures}
+                  </Fragment>
+                ) : (
+                  additionalSections([section])
+                ),
+              )}
+            {impactAtGlance}
+            {closing()}
           </>
         ) : page.kind === "initiative" ? (
           <>
@@ -672,7 +741,8 @@ export default function Website({
                 </div>
               )}
             </section>
-            {learningSections.length > 0 && (
+            {hasBriefPillars && editorialRows(learningSections)}
+            {!hasBriefPillars && learningSections.length > 0 && (
               <section className="section-pad">
                 <div className="section-heading">
                   <div>
@@ -704,7 +774,7 @@ export default function Website({
                 </div>
               </section>
             )}
-            {page.id === "way-way-shaung" && (
+            {page.id === "way-way-shaung" && !hasBriefPillars && (
               <section className="journey section-pad">
                 <span className="eyebrow">THE LEARNING JOURNEY</span>
                 <h2>Small steps. Lasting awareness.</h2>
@@ -774,6 +844,7 @@ export default function Website({
               {initiativeGallery(initiatives)}
             </section>
             {additionalSections(sections)}
+            {impactAtGlance}
             {closing()}
           </>
         ) : pageId === "contact" ? (
@@ -783,9 +854,11 @@ export default function Website({
               aria-labelledby="page-title"
             >
               <div className="editorial-hero-copy">
-                <span className="eyebrow">{ui("CONTACT US", "ဆက်သွယ်ရန်")}</span>
+                <span className="eyebrow">
+                  {ui("WORK WITH US", "ကျွန်ုပ်တို့နှင့် ပူးပေါင်းရန်")}
+                </span>
                 <h1 id="page-title">{tr(page.title)}</h1>
-                <p>{tr(page.description)}</p>
+                <p className="editorial-body">{tr(page.description)}</p>
                 {pageLink}
                 <div className="contact-info">
                   {settings.email && (
@@ -819,7 +892,11 @@ export default function Website({
                   />
                 </figure>
               </div>
-              <form className="contact-form" onSubmit={sendContact}>
+              <form
+                id="contact-form"
+                className="contact-form"
+                onSubmit={sendContact}
+              >
                 <h2>
                   {tr(settings.contactFormTitle) ||
                     ui("Start a conversation", "စကားပြောကြစို့")}
@@ -849,17 +926,17 @@ export default function Website({
                   <>
                     <fieldset disabled={!acceptsEnquiries || formState.busy}>
                       <label>
-                        Full name
+                        {ui("Full name", "အမည်အပြည့်အစုံ")}
                         <Input
                           name="name"
                           autoComplete="name"
                           required
                           maxLength={100}
-                          placeholder="Your full name"
+                          placeholder={ui("Your full name", "သင့်အမည်အပြည့်အစုံ")}
                         />
                       </label>
                       <label>
-                        Email address
+                        {ui("Email address", "အီးမေးလ်လိပ်စာ")}
                         <Input
                           name="email"
                           type="email"
@@ -870,22 +947,28 @@ export default function Website({
                         />
                       </label>
                       <label>
-                        Subject
+                        {ui("Enquiry subject", "ဆက်သွယ်သည့် အကြောင်းအရာ")}
                         <Input
                           name="subject"
                           required
                           maxLength={200}
-                          placeholder="How can we help?"
+                          placeholder={ui(
+                            "Partnership, volunteering, or a general enquiry",
+                            "ပူးပေါင်းဆောင်ရွက်မှု၊ စေတနာ့ဝန်ထမ်း သို့မဟုတ် အထွေထွေ မေးမြန်းမှု",
+                          )}
                         />
                       </label>
                       <label>
-                        Message
+                        {ui("Your message", "သင်ပေးပို့လိုသည့် အကြောင်းအရာ")}
                         <Textarea
                           name="message"
                           required
                           maxLength={5000}
                           rows={5}
-                          placeholder="Tell us a little more…"
+                          placeholder={ui(
+                            "Tell us about your enquiry or collaboration idea…",
+                            "သင့်မေးမြန်းချက် သို့မဟုတ် ပူးပေါင်းဆောင်ရွက်လိုသည့် အကြောင်းအရာကို ရေးပါ…",
+                          )}
                         />
                       </label>
                       <label className="honeypot" aria-hidden="true">
@@ -915,7 +998,7 @@ export default function Website({
                           ? "Sending…"
                           : contactTest
                             ? "Send test enquiry"
-                            : "Send message"}
+                            : ui("Send enquiry", "မေးမြန်းချက် ပေးပို့ရန်")}
                         <Arrow />
                       </button>
                     </fieldset>
@@ -932,7 +1015,7 @@ export default function Website({
                 )}
               </form>
             </section>
-            {additionalSections(sections)}
+            {editorialRows(sections)}
           </>
         ) : (
           <>
@@ -948,60 +1031,38 @@ export default function Website({
               className={`section-pad editorial-sections ${pageId === "privacy" ? "privacy-content" : ""}`}
             >
               {sections.map((s, i) => (
-                <article key={s.id}>
+                <article id={s.id} key={s.id}>
                   <span className="eyebrow">
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   <h2>{tr(s.heading)}</h2>
-                  <p>{tr(s.body)}</p>
+                  <p className="editorial-body">{tr(s.body)}</p>
                   {sectionExtras(s)}
                 </article>
               ))}
-              {pageId === "about" && (
-                <div className="values-panel">
-                  <span className="eyebrow">OUR FOCUS</span>
-                  {[
-                    ["01", "Scam awareness", "Recognizing online risks."],
-                    [
-                      "02",
-                      "Digital safety",
-                      "Building more confident digital lives.",
-                    ],
-                    ["03", "Education", "Making space to learn and share."],
-                  ].map(([n, title, desc]) => (
-                    <div key={n}>
-                      <span>{n}</span>
-                      <h3>{title}</h3>
-                      <p>{desc}</p>
-                      <Arrow />
-                    </div>
-                  ))}
-                </div>
-              )}
-              {pageId === "impact" && (
-                <div className="metrics-grid">
-                  {content
-                    .filter((c) => c.kind === "impact")
-                    .map((c) => (
-                      <article key={c.id}>
-                        <span className="metric">{c.value}</span>
-                        <h3>{tr(c.title)}</h3>
-                        <p>{tr(c.description)}</p>
-                        <small>{c.period}</small>
-                        {c.sections
-                          .filter((section) => section.visible)
-                          .sort((a, b) => a.order - b.order)
-                          .map((section) => (
-                            <div key={section.id}>
-                              <h4>{tr(section.heading)}</h4>
-                              <p>{tr(section.body)}</p>
-                              {sectionExtras(section)}
-                            </div>
-                          ))}
-                      </article>
+              {pageId === "about" &&
+                !sections.some((section) => section.id === "values") && (
+                  <div className="values-panel">
+                    <span className="eyebrow">OUR FOCUS</span>
+                    {[
+                      ["01", "Scam awareness", "Recognizing online risks."],
+                      [
+                        "02",
+                        "Digital safety",
+                        "Building more confident digital lives.",
+                      ],
+                      ["03", "Education", "Making space to learn and share."],
+                    ].map(([n, title, desc]) => (
+                      <div key={n}>
+                        <span>{n}</span>
+                        <h3>{title}</h3>
+                        <p>{desc}</p>
+                        <Arrow />
+                      </div>
                     ))}
-                </div>
-              )}
+                  </div>
+                )}
+              {pageId === "impact" && metricsGrid}
               {pageId === "impact" && publishedIds.has("initiatives") && (
                 <a className="button accent" href={href("initiatives")}>
                   Explore Our Initiatives
