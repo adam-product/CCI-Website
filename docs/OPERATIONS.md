@@ -54,7 +54,7 @@ Use the parallel `CCI_TEST_ADMIN_EMAIL` and `CCI_TEST_ADMIN_PASSWORD_HASH` setti
 
 ## Hosted release
 
-`.openai/hosting.json` declares D1 binding `DB` and R2 binding `BUCKET`. Configure the project ID in the authorized deployment checkout when publishing through Sites. Use the Sites source workflow to apply Drizzle migrations and publish the Worker. Configure the initial administrator following the setup above.
+The local Worker preview defaults to D1 binding `DB` and R2 binding `BUCKET`. For deployment through Sites, configure these bindings and the project ID in the checkout-local `.openai/hosting.json` file, which Git ignores. Use the Sites source workflow to apply Drizzle migrations and publish the Worker. Configure the initial administrator following the setup above.
 
 The first deployment is a private review Site, not a public CCI-domain launch. The website's search indexing setting is independent of hosting access. A second, independent staging Site is not provisioned by this release. To create one, use a new project ID with separate D1/R2 resources and environment variables; never copy live visitor records or credentials into staging.
 
