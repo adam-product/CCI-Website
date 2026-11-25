@@ -31,7 +31,7 @@ Deploy the checkout as a Next.js project with Node 22. Configure the server-side
 
 ### Supabase
 
-1. In Supabase, select **Connect → Transaction pooler** and copy the connection string. Replace the password placeholder with the database password, URL-encoding characters such as `@` if needed. Save it in Vercel as `POSTGRES_URL`.
+1. In Supabase, select **Connect → Transaction pooler** and copy the **shared pooler** connection string. Replace the password placeholder with the database password, URL-encoding characters such as `@` if needed. Save it in Vercel as `POSTGRES_URL`. If Vercel already stores a dedicated connection URI, set `POSTGRES_POOLER_HOST` to the project's shared pooler hostname from the **Session pooler** connection details. The app will use the shared transaction port and keep using the saved password.
 2. Save the Supabase project URL as `SUPABASE_URL`. From **Project Settings → API Keys → Secret keys**, save a server key as `SUPABASE_SECRET_KEY`. Set both the connection string and secret key as Vercel secrets and select the Production environment for all three values.
 3. The next production build prepares the private `cci` database schema and the `cci-media` bucket. The database installer is additive and can also be run with `npm run db:supabase` using those same variables.
 

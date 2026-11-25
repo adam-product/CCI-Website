@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { AwsClient } from "aws4fetch";
+import { supabasePoolerOptions } from "./supabase-pooler.mjs";
 
 const workerBindings = new AsyncLocalStorage<{
   env: Cloudflare.Env;
@@ -130,6 +131,7 @@ class CloudflareDatabase extends RemoteDatabase {
 async function openPostgres(connection: string) {
   const { default: postgres } = await import("postgres");
   return postgres(connection, {
+    ...supabasePoolerOptions(connection, runtimeSetting("POSTGRES_POOLER_HOST")),
     ssl: { rejectUnauthorized: true },
     prepare: false,
     max: 2,

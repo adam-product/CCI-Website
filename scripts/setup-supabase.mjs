@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { supabasePoolerOptions } from "../lib/supabase-pooler.mjs";
 
 const required = ["POSTGRES_URL", "SUPABASE_URL", "SUPABASE_SECRET_KEY"];
 const requested = process.argv.includes("--apply");
@@ -15,14 +16,17 @@ if (
     process.exitCode = 1;
   } else {
     const { default: postgres } = await import("postgres");
-    const sql = postgres(process.env.POSTGRES_URL, {
-      prepare: false,
-      ssl: { rejectUnauthorized: true },
-      max: 1,
-      fetch_types: false,
-      connect_timeout: 10,
-    });
+    let sql;
     try {
+      const connection = process.env.POSTGRES_URL;
+      sql = postgres(connection, {
+        ...supabasePoolerOptions(connection, process.env.POSTGRES_POOLER_HOST),
+        prepare: false,
+        ssl: { rejectUnauthorized: true },
+        max: 1,
+        fetch_types: false,
+        connect_timeout: 10,
+      });
       const migration = await readFile(
         new URL(
           "../supabase/migrations/20261120000100_cci_cms.sql",
@@ -39,7 +43,7 @@ if (
       );
       process.exitCode = 1;
     } finally {
-      await sql.end({ timeout: 5 });
+      await sql?.end({ timeout: 5 });
     }
   }
 }
