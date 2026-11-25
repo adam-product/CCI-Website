@@ -132,7 +132,7 @@ async function openPostgres(connection: string) {
   const { default: postgres } = await import("postgres");
   return postgres(connection, {
     ...supabasePoolerOptions(connection, runtimeSetting("POSTGRES_POOLER_HOST")),
-    ssl: { rejectUnauthorized: true },
+    ssl: { rejectUnauthorized: true, ca: runtimeSetting("SUPABASE_DB_CA_CERT") },
     prepare: false,
     max: 2,
     max_pipeline: 1,

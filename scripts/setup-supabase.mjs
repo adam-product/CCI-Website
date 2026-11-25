@@ -22,7 +22,7 @@ if (
       sql = postgres(connection, {
         ...supabasePoolerOptions(connection, process.env.POSTGRES_POOLER_HOST),
         prepare: false,
-        ssl: { rejectUnauthorized: true },
+        ssl: { rejectUnauthorized: true, ca: process.env.SUPABASE_DB_CA_CERT },
         max: 1,
         fetch_types: false,
         connect_timeout: 10,
