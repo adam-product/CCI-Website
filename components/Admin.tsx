@@ -1,9 +1,11 @@
 "use client";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { ChoiceField } from "./ChoiceField";
+import { ImageAttachment, ImageFilePicker } from "./ImageFilePicker";
 import { Switch } from "./ui/switch";
+import type { staffRecoveryMode } from "../lib/staff-auth";
 import {
   Dialog,
   DialogClose,
@@ -33,9 +35,12 @@ import {
   Trash2,
   LogOut,
   LockKeyhole,
+  Mail,
+  ArrowLeft,
   Menu,
 } from "lucide-react";
 import {
+  initiativeSlug,
   socialChannels,
   type Content,
   type Section,
@@ -79,13 +84,240 @@ const api = async (path: string, method = "GET", body?: any): Promise<any> => {
   if (!r.ok) throw Error(data.error || "Request failed.");
   return data;
 };
+async function uploadMedia(file: File, alt: string): Promise<{ id: string }> {
+  const form = new FormData();
+  form.set("file", file);
+  form.set("alt", alt);
+  return api("media", "POST", form);
+}
+
 function notifyPublication() {
   if (!("BroadcastChannel" in window)) return;
   const channel = new BroadcastChannel("cci-publication");
   channel.postMessage("changed");
   channel.close();
 }
-export default function Admin() {
+
+function NewPasswordFields({ temporary = false }: { temporary?: boolean } = {}) {
+  const [showPassword, setShowPassword] = useState(false);
+  const type = showPassword ? "text" : "password";
+  return (
+    <>
+      <label>
+        <span>{temporary ? "Temporary password" : "New password"}</span>
+        <Input
+          name="newPassword"
+          type={type}
+          autoComplete="new-password"
+          minLength={15}
+          maxLength={256}
+          required
+        />
+      </label>
+      <label>
+        {temporary ? "Confirm temporary password" : "Confirm new password"}
+        <Input
+          name="confirmPassword"
+          type={type}
+          autoComplete="new-password"
+          minLength={15}
+          maxLength={256}
+          required
+        />
+      </label>
+      <button
+        className="staff-password-visibility"
+        type="button"
+        onClick={() => setShowPassword(!showPassword)}
+      >
+        <Eye size={16} aria-hidden="true" />{" "}
+        {showPassword ? "Hide passwords" : "Show passwords"}
+      </button>
+    </>
+  );
+}
+
+type RecoveryMode = ReturnType<typeof staffRecoveryMode>;
+type RecoveryState = { token?: string; purpose?: "invite" | "reset" };
+
+function StaffRecovery({
+  token,
+  purpose,
+  mode,
+  onBack,
+  onComplete,
+  onRequest,
+}: {
+  token?: string;
+  purpose?: RecoveryState["purpose"];
+  mode: RecoveryMode;
+  onBack: () => void;
+  onComplete: (notice: string) => void;
+  onRequest: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [sentTo, setSentTo] = useState("");
+  const invite = purpose === "invite";
+  const heading = sentTo
+    ? "Check your inbox"
+    : invite
+      ? "Confirm your staff email"
+      : token
+        ? "Choose a new password"
+        : "Reset your password";
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const newPassword = form.get("newPassword");
+    if (token && newPassword !== form.get("confirmPassword")) {
+      setError("The new passwords do not match.");
+      return;
+    }
+    setError("");
+    setBusy(true);
+    try {
+      if (token) {
+        await api(
+          invite ? "staff/accept-invitation" : "staff/reset-password",
+          "POST",
+          { token, newPassword },
+        );
+        onComplete(
+          invite
+            ? "Your staff email is confirmed. Sign in with your new password."
+            : "Your password was reset. Sign in with your new password.",
+        );
+      } else {
+        const email = String(form.get("email") ?? "").trim();
+        await api("staff/forgot-password", "POST", { email });
+        setSentTo(email);
+      }
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Unable to reset the password.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="staff-recovery">
+      <div className="staff-recovery-icon" aria-hidden="true">
+        {sentTo || invite ? <Mail size={25} /> : <LockKeyhole size={25} />}
+      </div>
+      <h1 id="staff-auth-title">{heading}</h1>
+      {!token && mode === "local" ? (
+        <div className="local-staff-recovery">
+          <p>This preview uses a private recovery link from your computer.</p>
+          <ol>
+            <li>
+              Open PowerShell in the <strong>cci-website</strong> folder and run
+              <code>npm.cmd run staff:recover:local</code>
+            </li>
+            <li>
+              Enter your staff email. If this is the first local account,
+              approve its setup when prompted.
+            </li>
+            <li>Open the private link to choose a new password.</li>
+          </ol>
+        </div>
+      ) : !token && mode === "unavailable" ? (
+        <p>
+          Ask a CCI Super Administrator to issue a temporary portal password.
+        </p>
+      ) : sentTo ? (
+        <>
+          <div className="staff-recovery-status" role="status">
+            <p>
+              If there’s an active account for <strong>{sentTo}</strong>, you’ll
+              receive a link that expires after 20 minutes.
+            </p>
+            <p>Check your spam folder if the message doesn’t appear.</p>
+          </div>
+          <button
+            className="text-link staff-recovery-link"
+            type="button"
+            onClick={() => setSentTo("")}
+          >
+            Use a different email
+          </button>
+        </>
+      ) : (
+        <>
+          <p>
+            {invite
+              ? "Choose a password of at least 15 characters to finish setting up your account."
+              : token
+                ? "Choose a unique password of at least 15 characters."
+                : "Enter your staff email and we’ll send a secure, one-time link."}
+          </p>
+          <form className="staff-unlock" onSubmit={submit}>
+            {token ? (
+              <NewPasswordFields />
+            ) : (
+              <label>
+                Staff email address
+                <Input
+                  name="email"
+                  type="email"
+                  autoComplete="username"
+                  maxLength={254}
+                  required
+                />
+              </label>
+            )}
+            {error && (
+              <p className="error" role="alert">
+                {error}
+              </p>
+            )}
+            <button className="button navy" disabled={busy}>
+              {token ? (
+                <LockKeyhole size={17} aria-hidden="true" />
+              ) : (
+                <Mail size={17} aria-hidden="true" />
+              )}
+              {busy
+                ? token
+                  ? "Saving…"
+                  : "Requesting link…"
+                : invite
+                  ? "Confirm email and save password"
+                  : token
+                    ? "Save new password"
+                    : "Send reset link"}
+            </button>
+          </form>
+          {token && !invite && (
+            <button
+              className="text-link staff-recovery-link"
+              type="button"
+              onClick={onRequest}
+              disabled={busy}
+            >
+              Request a new reset link
+            </button>
+          )}
+        </>
+      )}
+      <button
+        className="staff-recovery-back"
+        type="button"
+        onClick={onBack}
+        disabled={busy}
+      >
+        <ArrowLeft size={16} aria-hidden="true" /> Back to sign in
+      </button>
+    </div>
+  );
+}
+
+export default function Admin({ recoveryMode }: { recoveryMode: RecoveryMode }) {
   const [session, setSession] = useState<any>(undefined);
   const [tab, setTab] = useState("Overview");
   const [rows, setRows] = useState<Row[]>([]);
@@ -95,7 +327,8 @@ export default function Admin() {
     () => new Set(),
   );
   const [edit, setEdit] = useState<Content | null>(null);
-  const cardPhotoInput = useRef<HTMLInputElement>(null);
+  const [mediaUploadAlt, setMediaUploadAlt] = useState("");
+  const [mediaItems, setMediaItems] = useState<{ id: string; name: string; alt: string; size: number }[]>([]);
   const [version, setVersion] = useState(0);
   const [language, setLanguage] = useState<"en" | "my">("en");
   const [query, setQuery] = useState("");
@@ -104,7 +337,10 @@ export default function Admin() {
   const [busy, setBusy] = useState(false);
   const [staffActive, setStaffActive] = useState(true);
   const [staffIssuePassword, setStaffIssuePassword] = useState(false);
+  const [staffManualPassword, setStaffManualPassword] = useState(false);
   const [choosingPassword, setChoosingPassword] = useState(false);
+  const [recovery, setRecovery] = useState<RecoveryState | null>(null);
+  const [passwordNotice, setPasswordNotice] = useState("");
   const [issuedPassword, setIssuedPassword] = useState<{
     email: string;
     temporaryPassword: string;
@@ -117,13 +353,11 @@ export default function Admin() {
   async function refresh() {
     const updated: Row[] = can("read") ? await api("content") : [];
     if (can("read")) setRows(updated);
-    if (
-      ["Media Library", "Enquiries", "Staff Access", "Audit Log"].includes(tab)
-    )
+    if (tab === "Media Library") setMediaItems(await api("media"));
+    if (["Enquiries", "Staff Access", "Audit Log"].includes(tab))
       setItems(
         await api(
           {
-            "Media Library": "media",
             Enquiries: "enquiries",
             "Staff Access": "staff",
             "Audit Log": "audit",
@@ -137,6 +371,19 @@ export default function Admin() {
       .then((data) => setNewEnquiries(data.count))
       .catch(() => {});
   useEffect(() => {
+    const openResetLink = () => {
+      const fragment = new URLSearchParams(window.location.hash.slice(1));
+      const purpose = fragment.has("invite") ? "invite" : "reset";
+      if (!fragment.has(purpose)) return;
+      setRecovery({ token: fragment.get(purpose) || "invalid", purpose });
+      window.history.replaceState(
+        window.history.state,
+        "",
+        window.location.pathname + window.location.search,
+      );
+    };
+    openResetLink();
+    window.addEventListener("hashchange", openResetLink);
     api("session")
       .then((s) => {
         setSession(s);
@@ -153,6 +400,7 @@ export default function Admin() {
         setSession(null);
         setError(e.message);
       });
+    return () => window.removeEventListener("hashchange", openResetLink);
   }, []);
   useEffect(() => {
     let cancelled = false;
@@ -236,6 +484,7 @@ export default function Admin() {
         if (!authorized?.role)
           throw new Error("The portal could not open. Try signing in again.");
         setChoosingPassword(false);
+        setPasswordNotice("");
         setSession(authorized);
         if (authorized.role === "enquiry") setTab("Enquiries");
       }
@@ -269,6 +518,8 @@ export default function Admin() {
     role: string | undefined,
     active: boolean | undefined,
     issuePassword = false,
+    emailInvite = false,
+    initialPassword?: string,
   ) {
     if (
       issuePassword &&
@@ -282,15 +533,22 @@ export default function Admin() {
       return;
     void run(
       async () => {
-        const result = await api("staff", "POST", {
-          email,
-          role,
-          active,
-          issuePassword,
-        });
-        if (result.temporaryPassword) setIssuedPassword(result);
+        try {
+          const result = await api("staff", "POST", { email, role, active, issuePassword, emailInvite, initialPassword });
+          if (result.temporaryPassword) setIssuedPassword(result);
+          if (initialPassword !== undefined) setStaffManualPassword(false);
+        } catch (error) {
+          if (emailInvite) await refresh().catch(() => {});
+          throw error;
+        }
       },
-      issuePassword ? "Temporary password issued." : "Staff access updated.",
+      emailInvite
+        ? "Staff invitation sent."
+        : initialPassword !== undefined
+          ? "Staff account created. Share the temporary password privately."
+          : issuePassword
+            ? "Temporary password issued."
+            : "Staff access updated.",
     );
   }
   function updateInitiativeStatus(row: Row, status: string) {
@@ -333,42 +591,61 @@ export default function Admin() {
   }
   async function save() {
     if (!edit) return;
+    if (!edit.title.en.trim()) {
+      setLanguage("en");
+      setMessage("");
+      setError("Enter an English title before saving.");
+      return;
+    }
     await run(async () => {
-      await api("content", "POST", { content: edit, version });
-      const updated = await api("content");
+      const { id } = await api("content", "POST", { content: edit, version });
+      const updated: Row[] = await api("content");
       setRows(updated);
-      const row = updated.find((r: Row) => r.id === edit.id);
+      const row = updated.find((item) => item.id === id);
+      if (!row) throw new Error("Draft saved. Reopen the record from the list to continue.");
       setVersion(row.version);
       setEdit(structuredClone(row.draft));
     }, "Draft saved. Your public website has not changed.");
   }
-  function uploadCardImage() {
-    if (edit?.kind !== "initiative") return;
-    const input = cardPhotoInput.current;
-    const file = input?.files?.[0];
-    const alt = edit.cardAlt?.trim();
-    if (!file || !alt) {
-      setMessage("");
-      setError("Choose a card image and enter its alternative text.");
-      return;
-    }
+  function imageField(
+    label: string,
+    src: string | undefined,
+    alt: string,
+    attachImage: (draft: Content, path: string, alt: string) => Content,
+    fallbackAlt = edit?.title.en || edit?.title.my || label,
+  ) {
+    if (!edit) return null;
     const id = edit.id;
-    const form = new FormData();
-    form.set("file", file);
-    form.set("alt", alt);
-    void run(async () => {
-      const { id: assetId } = await api("media", "POST", form);
+    const attach = (path: string, imageAlt: string) => {
       setEdit((current) =>
-        current?.kind === "initiative" && current.id === id
-          ? {
-              ...current,
-              cardImage: `/api/media-file/${assetId}`,
-              cardAlt: alt,
-            }
+        current?.id === id
+          ? attachImage(current, path, imageAlt)
           : current,
       );
-      if (input && input === cardPhotoInput.current) input.value = "";
-    }, "Card image attached. Save the draft and publish to update the website.");
+    };
+    return (
+      <ImageAttachment
+        key={id}
+        label={label}
+        src={src}
+        disabled={busy}
+        editable={can("media") && can("edit")}
+        onRemove={() => attach("", alt)}
+        onUpload={async (file) => {
+          const imageAlt = (alt.trim() || fallbackAlt.trim() || label).slice(0, 500);
+          setError("");
+          setMessage("");
+          setBusy(true);
+          try {
+            const { id: assetId } = await uploadMedia(file, imageAlt);
+            attach(`/api/media-file/${assetId}`, imageAlt);
+            setMessage("Image attached. Save the draft to keep this change.");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
+    );
   }
   const textField = (label: string, key: "title" | "description") =>
     edit && (
@@ -387,7 +664,7 @@ export default function Admin() {
           />
         ) : (
           <Input
-            required
+            required={language === "en"}
             value={edit[key][language]}
             onChange={(e) =>
               setEdit({
@@ -416,94 +693,95 @@ export default function Admin() {
         />
       </label>
     );
-  if (session === undefined)
+  if (recovery || !session || session.role === "none")
     return (
-      <div className="admin-login">
-        <span className="eyebrow">CCI ADMINISTRATION</span>
-        <h1>Opening your workspace…</h1>
-        {error && <p className="error">{error}</p>}
-      </div>
-    );
-  if (!session || session.role === "none")
-    return (
-      <div className="admin-login">
-        <a href="/en" className="brand">
-          <img src="/brand/cci-logo.webp" alt="Click Cross Initiative" />
-        </a>
-        <div>
-          <span className="eyebrow">CCI STAFF PORTAL</span>
-          <h1>
-            {choosingPassword
-              ? "Set your portal password."
-              : "Sign in to the staff portal."}
-          </h1>
-          <p>Use your CCI staff email and portal password.</p>
-          <form className="staff-unlock" onSubmit={unlockPortal}>
-            <label>
-              Email address
-              <Input
-                name="email"
-                type="email"
-                autoComplete="username"
-                maxLength={254}
-                required
-              />
-            </label>
-            <label>
-              {choosingPassword
-                ? "Temporary portal password"
-                : "Portal password"}
-              <Input
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                maxLength={256}
-                required
-              />
-            </label>
-            {choosingPassword && (
-              <>
-                <p>Use a unique password of at least 15 characters.</p>
+      <main className="admin-login">
+        <section className="admin-auth-card" aria-labelledby="staff-auth-title">
+          <a href="/en" className="brand">
+            <img src="/brand/cci-logo.webp" alt="Click Cross Initiative" />
+          </a>
+          {session === undefined ? (
+            <div role="status">
+              <h1 id="staff-auth-title">Opening your workspace…</h1>
+            </div>
+          ) : recovery ? (
+            <StaffRecovery
+              key={`${recovery.purpose ?? "request"}-${recovery.token ?? ""}`}
+              token={recovery.token}
+              purpose={recovery.purpose}
+              mode={recoveryMode}
+              onBack={() => setRecovery(null)}
+              onRequest={() => setRecovery({})}
+              onComplete={(notice) => {
+                setSession(null);
+                setRecovery(null);
+                setPasswordNotice(notice);
+              }}
+            />
+          ) : (
+            <div>
+              <h1 id="staff-auth-title">
+                {choosingPassword ? "Set your portal password" : "Staff portal sign-in"}
+              </h1>
+              <p>Use your CCI staff email and portal password.</p>
+              {passwordNotice && (
+                <p className="success" role="status">
+                  {passwordNotice}
+                </p>
+              )}
+              <form className="staff-unlock" onSubmit={unlockPortal}>
                 <label>
-                  New password
+                  Staff email address
                   <Input
-                    name="newPassword"
-                    type="password"
-                    autoComplete="new-password"
-                    minLength={15}
-                    maxLength={256}
+                    name="email"
+                    type="email"
+                    autoComplete="username"
+                    maxLength={254}
                     required
                   />
                 </label>
                 <label>
-                  Confirm new password
+                  {choosingPassword ? "Temporary portal password" : "Portal password"}
                   <Input
-                    name="confirmPassword"
+                    name="password"
                     type="password"
-                    autoComplete="new-password"
-                    minLength={15}
+                    autoComplete="current-password"
                     maxLength={256}
                     required
                   />
                 </label>
-              </>
-            )}
-            {error && (
-              <p className="error" role="alert">
-                {error}
-              </p>
-            )}
-            <button className="button navy" disabled={busy}>
-              {choosingPassword ? "Set password and sign in" : "Sign in"}
-              <LockKeyhole size={16} aria-hidden="true" />
-            </button>
-          </form>
-          <small>For password help, contact a CCI Super Administrator.</small>
-        </div>
-        <a className="text-link" href="/en">
-          Return to the website <ArrowUpRight size={16} />
+                {choosingPassword && (
+                  <>
+                    <p>Use a unique password of at least 15 characters.</p>
+                    <NewPasswordFields />
+                  </>
+                )}
+                {error && <p className="error" role="alert">{error}</p>}
+                <button className="button navy" disabled={busy}>
+                  <LockKeyhole size={16} aria-hidden="true" />
+                  {choosingPassword ? "Set password and sign in" : "Sign in"}
+                </button>
+              </form>
+              <button
+                className="text-link staff-recovery-link"
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  setError("");
+                  setChoosingPassword(false);
+                  setPasswordNotice("");
+                  setRecovery({});
+                }}
+              >
+                Forgot password?
+              </button>
+            </div>
+          )}
+        </section>
+        <a className="text-link admin-auth-return" href="/en">
+          Return to the website <ArrowUpRight size={16} aria-hidden="true" />
         </a>
-      </div>
+      </main>
     );
   const current = rows.find((r) => r.id === edit?.id);
   const dirty = !!(
@@ -529,7 +807,7 @@ export default function Admin() {
       ? items.filter((item) => typeof item.message === "string")
       : [];
   const matchingEnquiries = enquiries.filter((item) =>
-    `${item.name} ${item.email} ${item.subject}`
+    `${item.name} ${item.email} ${item.subject} ${item.organisation ?? ""} ${item.location ?? ""}`
       .toLowerCase()
       .includes(query.trim().toLowerCase()),
   );
@@ -706,7 +984,24 @@ export default function Admin() {
                   }}
                 >
                   <fieldset disabled={!can("edit") || busy}>
-                    {!version && field("Slug / unique ID", "id")}
+                    {!version && (
+                      edit.kind === "initiative" ? (
+                        <label>
+                          Initiative URL slug
+                          <Input
+                            value={edit.id}
+                            placeholder={initiativeSlug(edit.title.en) || "e.g. digital-safety-workshops"}
+                            autoCapitalize="none"
+                            spellCheck={false}
+                            aria-describedby="initiative-slug-help"
+                            onChange={(event) => setEdit({ ...edit, id: event.target.value })}
+                          />
+                          <small className="form-note" id="initiative-slug-help">
+                            Leave blank to use the English title. The first saved draft sets the URL.
+                          </small>
+                        </label>
+                      ) : field("Slug / unique ID", "id")
+                    )}
                     {textField(
                       edit.kind === "settings" ? "Organization name" : "Title",
                       "title",
@@ -718,10 +1013,14 @@ export default function Admin() {
                       "description",
                     )}
                     {edit.kind === "settings" && (
-                      <div className="field-grid">
-                        {field("Logo URL", "image")}
+                      <>
                         {field("Logo alternative text", "alt")}
-                      </div>
+                        {imageField("Website logo", edit.image, edit.alt, (draft, image, alt) => ({
+                          ...draft,
+                          image,
+                          alt,
+                        }))}
+                      </>
                     )}
                     {edit.id === "home" && (
                       <>
@@ -840,8 +1139,13 @@ export default function Admin() {
                     )}
                     {["initiative", "page"].includes(edit.kind) && (
                       <>
-                        {field("Image URL", "image")}
                         {field("Image alternative text", "alt")}
+                        {imageField(
+                          edit.kind === "initiative" ? "Initiative hero image" : "Page image",
+                          edit.image,
+                          edit.alt,
+                          (draft, image, alt) => ({ ...draft, image, alt }),
+                        )}
                         {field("Approved platform / external HTTPS URL", "url")}
                       </>
                     )}
@@ -863,14 +1167,6 @@ export default function Admin() {
                             Appears on Our Initiatives and on Home when
                             featured. PNG, JPEG or WebP.
                           </p>
-                          {edit.cardImage && (
-                            <img
-                              src={edit.cardImage}
-                              alt={edit.cardAlt || ""}
-                              loading="lazy"
-                            />
-                          )}
-                          {field("Card image URL", "cardImage")}
                           <label>
                             Card image alternative text
                             <Input
@@ -882,27 +1178,11 @@ export default function Admin() {
                               disabled={busy}
                             />
                           </label>
-                          {can("media") && can("edit") && (
-                            <div className="card-image-upload">
-                              <label>
-                                Card image file
-                                <Input
-                                  ref={cardPhotoInput}
-                                  type="file"
-                                  accept="image/png,image/jpeg,image/webp"
-                                  disabled={busy}
-                                />
-                              </label>
-                              <button
-                                type="button"
-                                className="button navy"
-                                onClick={uploadCardImage}
-                                disabled={busy}
-                              >
-                                <Upload size={16} aria-hidden="true" /> Upload
-                                and attach
-                              </button>
-                            </div>
+                          {imageField(
+                            "Card image",
+                            edit.cardImage,
+                            edit.cardAlt || "",
+                            (draft, cardImage, cardAlt) => ({ ...draft, cardImage, cardAlt }),
                           )}
                         </section>
                       </>
@@ -1206,13 +1486,18 @@ export default function Admin() {
                               />
                             </label>
                           </div>
-                          <label>
-                            Image URL
-                            <Input
-                              value={s.image}
-                              onChange={(e) => patch({ image: e.target.value })}
-                            />
-                          </label>
+                          {imageField(
+                            s.display === "partner" ? "Partner logo" : `Section ${i + 1} image`,
+                            s.image,
+                            "",
+                            (draft, image) => ({
+                              ...draft,
+                              sections: draft.sections.map((section) =>
+                                section.id === s.id ? { ...section, image } : section,
+                              ),
+                            }),
+                            s.heading.en.trim() || s.heading.my.trim(),
+                          )}
                           <div className="field-grid">
                             <label>
                               Display order
@@ -1612,59 +1897,51 @@ export default function Admin() {
             </section>
           ) : tab === "Media Library" ? (
             <>
-              <form
-                className="admin-panel upload-panel"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const form = e.currentTarget;
-                  run(async () => {
-                    await api("media", "POST", new FormData(form));
-                    form.reset();
-                  }, "Image uploaded. Copy its URL to assign it to content.");
-                }}
-              >
+              <section className="admin-panel upload-panel">
                 <Upload size={28} />
                 <div>
                   <h2>Add an approved image</h2>
-                  <p>PNG, JPEG or WebP · Alternative text required</p>
+                  <p>Enter alternative text, then choose a file to upload it.</p>
                 </div>
-                <label className="file-label">
-                  Image file
-                  <Input
-                    required
-                    name="file"
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                  />
-                </label>
                 <label>
                   Alternative text
                   <Input
                     required
-                    name="alt"
                     maxLength={500}
                     placeholder="Describe the image"
+                    disabled={busy}
+                    value={mediaUploadAlt}
+                    onChange={(event) => setMediaUploadAlt(event.target.value)}
                   />
                 </label>
-                <button className="button navy" disabled={busy}>
-                  Upload image
-                </button>
-              </form>
+                <ImageFilePicker
+                  label="Choose image file"
+                  disabled={busy || !mediaUploadAlt.trim()}
+                  onChoose={async (file) => {
+                    const alt = mediaUploadAlt.trim();
+                    setBusy(true);
+                    setError("");
+                    setMessage("");
+                    try {
+                      const { id } = await uploadMedia(file, alt);
+                      setMediaItems((images) => [
+                        { id, name: file.name.slice(0, 200), alt, size: file.size },
+                        ...images.filter((image) => image.id !== id),
+                      ]);
+                      setMediaUploadAlt("");
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                />
+              </section>
               <div className="media-grid">
-                {items.map((m) => (
+                {mediaItems.map((m) => (
                   <article className="admin-panel" key={m.id}>
                     <img src={"/api/media-file/" + m.id} alt={m.alt} />
                     <h3>{m.name}</h3>
                     <p>{m.alt}</p>
                     <small>{Math.round(m.size / 1024)} KB</small>
-                    <label>
-                      Image URL
-                      <Input
-                        readOnly
-                        value={"/api/media-file/" + m.id}
-                        onFocus={(e) => e.target.select()}
-                      />
-                    </label>
                     <button
                       className="danger-link"
                       onClick={() =>
@@ -1712,9 +1989,11 @@ export default function Admin() {
                   <table className="admin-data-table enquiries-table">
                     <thead>
                       <tr>
-                        <th scope="col">Subject</th>
+                        <th scope="col">Inquiry type / subject</th>
                         <th scope="col">Full name</th>
                         <th scope="col">Email address</th>
+                        <th scope="col">Organisation</th>
+                        <th scope="col">Country / Location</th>
                         <th scope="col">Message</th>
                         <th scope="col">Status</th>
                         <th scope="col">Received</th>
@@ -1742,6 +2021,8 @@ export default function Admin() {
                                   {e.email}
                                 </a>
                               </td>
+                              <td>{e.organisation || "—"}</td>
+                              <td>{e.location || "—"}</td>
                               <td>
                                 <span className="enquiry-preview">
                                   {e.message}
@@ -1778,7 +2059,7 @@ export default function Admin() {
                               className="enquiry-detail"
                               hidden={!expanded}
                             >
-                              <td colSpan={7}>
+                              <td colSpan={9}>
                                 <div className="enquiry-detail-content">
                                   <p className="message-body">{e.message}</p>
                                   <form
@@ -1833,7 +2114,7 @@ export default function Admin() {
                       })}
                       {matchingEnquiries.length === 0 && (
                         <tr>
-                          <td colSpan={7}>No enquiries match your search.</td>
+                          <td colSpan={9}>No enquiries match your search.</td>
                         </tr>
                       )}
                     </tbody>
@@ -1850,20 +2131,26 @@ export default function Admin() {
           ) : tab === "Staff Access" ? (
             <section className="admin-panel">
               <h2>Staff accounts</h2>
-              <p>
-                Add a staff email and choose a role. New accounts receive a
-                temporary password to replace on first sign-in.
-              </p>
+              <p>Add a staff email and choose a role. You can set a temporary password yourself or have the portal generate one.</p>
               <form
                 className="staff-form"
                 onSubmit={(e) => {
                   e.preventDefault();
-                  const f = new FormData(e.currentTarget);
+                  const f = new FormData(e.currentTarget, (e.nativeEvent as SubmitEvent).submitter);
+                  const emailInvite = f.get("delivery") === "email";
+                  const initialPassword = staffManualPassword ? String(f.get("newPassword") ?? "") : undefined;
+                  if (initialPassword !== undefined && initialPassword !== f.get("confirmPassword")) {
+                    setMessage("");
+                    setError("The temporary passwords do not match.");
+                    return;
+                  }
                   saveAccess(
                     String(f.get("email")),
                     String(f.get("role")),
                     staffActive,
-                    staffIssuePassword,
+                    staffIssuePassword && !emailInvite,
+                    emailInvite,
+                    initialPassword,
                   );
                 }}
               >
@@ -1897,18 +2184,42 @@ export default function Admin() {
                   </label>
                 </div>
                 <button className="button navy" disabled={busy}>
-                  Save access
+                  {staffManualPassword ? "Create staff account" : "Save access"}
                 </button>
+                <label className="staff-toggle-control staff-password-option">
+                  <Switch
+                    className="staff-switch"
+                    aria-label="Set a temporary password manually"
+                    checked={staffManualPassword}
+                    onCheckedChange={(checked) => {
+                      setStaffManualPassword(checked);
+                      if (checked) setStaffIssuePassword(false);
+                    }}
+                    disabled={busy}
+                  />
+                  <span>Set a temporary password manually</span>
+                </label>
+                {staffManualPassword && (
+                  <fieldset className="staff-initial-password" disabled={busy}>
+                    <NewPasswordFields temporary />
+                    <p className="form-note">Use 15–256 characters. The password expires after 24 hours, and staff must replace it on first sign-in.</p>
+                  </fieldset>
+                )}
                 <label className="staff-toggle-control staff-password-option">
                   <Switch
                     className="staff-switch"
                     aria-label="Reset the password for an existing account"
                     checked={staffIssuePassword}
                     onCheckedChange={setStaffIssuePassword}
-                    disabled={busy}
+                    disabled={busy || staffManualPassword}
                   />
                   <span>Reset the password for an existing account</span>
                 </label>
+                {recoveryMode === "email" && (
+                  <button className="button outline staff-email-invite" name="delivery" value="email" disabled={busy || !staffActive || staffIssuePassword || staffManualPassword}>
+                    Send invitation <Mail size={16} aria-hidden="true" />
+                  </button>
+                )}
               </form>
               <div
                 className="table-wrap"
@@ -1939,7 +2250,7 @@ export default function Admin() {
                               s.role}
                           </td>
                           <td>
-                            {s.has_password
+                            {s.email_status === "pending" ? "Awaiting email confirmation" : s.email_status === "confirmed" ? "Email confirmed" : s.has_password
                               ? "Email and password"
                               : "Password needed"}
                           </td>
@@ -1964,14 +2275,14 @@ export default function Admin() {
                               type="button"
                               className="table-action-button"
                               disabled={
-                                busy || s.managed || s.email === session.email
+                                busy || s.managed || s.email === session.email || (s.email_status === "pending" && (!s.active || recoveryMode !== "email"))
                               }
                               onClick={() =>
-                                saveAccess(s.email, undefined, undefined, true)
+                                saveAccess(s.email, undefined, undefined, s.email_status !== "pending", s.email_status === "pending")
                               }
                             >
-                              <LockKeyhole size={15} aria-hidden="true" />
-                              {s.has_password
+                              {s.email_status === "pending" ? <Mail size={15} aria-hidden="true" /> : <LockKeyhole size={15} aria-hidden="true" />}
+                              {s.email_status === "pending" ? "Resend invitation" : s.has_password
                                 ? "Reset password"
                                 : "Issue password"}
                             </button>

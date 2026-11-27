@@ -268,13 +268,21 @@ try {
   const contactPage = await (await fetch(base + "/en/contact")).text();
   assert(contactPage.includes("CCI enquiry heading check"));
   const startingCount = (await call("enquiries/count")).data.count;
+  const invalidType = await call("contact", {
+    method: "POST",
+    anonymous: true,
+    body: { name: "Local QA", email: "qa@example.test", enquiryType: "unlisted", message: "Test only", consent: true },
+  });
+  assert.equal(invalidType.status, 400);
   const enquiry = await call("contact", {
     method: "POST",
     anonymous: true,
     body: {
       name: "Local QA",
       email: "qa@example.test",
-      subject: "Local integration test",
+      enquiryType: "partnership",
+      organisation: " Example Civic Group ",
+      location: " Thailand ",
       message: "Test-only enquiry; not a real visitor.",
       consent: true,
       website: "",
@@ -283,7 +291,11 @@ try {
   assert.equal(enquiry.status, 201, JSON.stringify(enquiry));
   assert.equal(enquiry.data.message, "CCI enquiry confirmation check");
   assert.equal((await call("enquiries/count")).data.count, startingCount + 1);
-  assert((await call("enquiries")).data.some((e) => e.id === enquiry.data.id));
+  const recorded = (await call("enquiries")).data.find((e) => e.id === enquiry.data.id);
+  assert.equal(recorded.subject, "Organizational Partnership");
+  assert.equal(recorded.enquiry_type, "partnership");
+  assert.equal(recorded.organisation, "Example Civic Group");
+  assert.equal(recorded.location, "Thailand");
   ok("Validated contact enquiries persist in the protected inbox");
   assert.equal(
     (
@@ -429,6 +441,8 @@ const inboxTest = (await call("enquiries")).data.find(
   (entry) => entry.id === testSubmission.data.id,
 );
 assert.equal(inboxTest.subject, "[TEST] Contact test mode");
+assert.equal(inboxTest.enquiry_type, null);
+assert.equal(inboxTest.organisation, null);
 assert.equal(
   (
     await call("enquiries", {

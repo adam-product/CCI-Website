@@ -1,5 +1,14 @@
 import { briefMetrics, briefPages } from "./cci-brief-content";
 
+export function initiativeSlug(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/\p{M}+/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 export const socialChannels = {
   facebook: "Facebook",
   instagram: "Instagram",
@@ -208,7 +217,7 @@ const originalContent: Content[] = [
           my: "",
         },
         body: {
-          en: "The contact form asks for your name, email address, subject, and message. We record when the enquiry arrives. Authorized staff can add internal notes and update the enquiry status. Please leave out passwords, payment details, identity documents, and sensitive evidence.",
+          en: "The contact form asks for your name, email address, inquiry type, and message. You can also provide your organisation or institution and your country or location. We record when the enquiry arrives. Authorized staff can add internal notes and update the enquiry status. Please leave out passwords, payment details, identity documents, and sensitive evidence.",
           my: "",
         },
         image: "",

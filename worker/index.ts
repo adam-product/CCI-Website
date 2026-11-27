@@ -32,7 +32,7 @@ const worker = {
         },
       };
     }
-    const response = await withWorkerStorage(env, request, () =>
+    const response = await withWorkerStorage(env, request, ctx, () =>
       runWithConnectorBinding(binding, () => handler.fetch(request, env, ctx)),
     );
     const secure = new Response(response.body, response);

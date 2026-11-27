@@ -2,9 +2,11 @@
 
 ## Sign in
 
-Open `/admin` and enter the email and password issued for your CCI staff account. On first sign-in, use your temporary password and choose a new password of at least 15 characters.
+Open `/admin` and sign in with your staff email and password. If you received an invitation, use it within 24 hours to confirm your email and set a password of at least 15 characters. If a Super Administrator issued a temporary password, sign in with it to choose your permanent password.
 
-Under **Staff Access**, a Super Administrator can add staff by email, assign a role and issue a temporary password. Share the password privately. Staff-created temporary passwords expire after 24 hours. Resetting a password or disabling an account revokes its existing session. Ask a Super Administrator for password assistance.
+Choose **Forgot password?** on the sign-in page and enter your staff email. Open the reset email within 20 minutes, choose a new password and sign in again. If reset emails are unavailable, ask a Super Administrator for help.
+
+Under **Staff Access**, a Super Administrator can enter a staff email and assign a role. To create credentials manually, turn on **Set a temporary password manually**, enter and confirm a password of at least 15 characters, and select **Create staff account**. Share the password privately. It expires after 24 hours and must be replaced on first sign-in. **Save access** generates a temporary password for an account without credentials. **Send invitation** is available when email delivery is configured, and **Resend invitation** issues a fresh link for a pending account. Resetting a password or disabling an account revokes its existing session.
 
 ## Edit and publish
 
@@ -26,7 +28,7 @@ Edit the Way Way Shaung initiative. Add the approved production HTTPS URL, chang
 
 ## Media
 
-Use Media Library to upload a PNG, JPEG or WebP with alt text. The maximum is 4 MB on Vercel and 5 MB on the Worker. Select and copy the Image URL into the desired content image field, then save and publish the record. Uploading a replacement creates a new asset. To delete an old image, first remove its references from published content and drafts.
+In the content editor, select **Choose file** to upload and attach the image to your draft automatically. Describe the image in the alternative text field when available. A blank field uses the record title, and section images use their heading. Save the draft and publish the record when ready. To upload directly to the Media Library, enter alternative text before choosing a file. Uploads accept PNG, JPEG and WebP up to 4 MB on Vercel and 5 MB on the Worker. Uploading a replacement creates a new asset. To delete an old image, first remove its references from published content and drafts.
 
 ## Impact and optional sections
 

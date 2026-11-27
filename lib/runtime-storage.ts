@@ -5,17 +5,30 @@ import { supabasePoolerOptions } from "./supabase-pooler.mjs";
 const workerBindings = new AsyncLocalStorage<{
   env: Cloudflare.Env;
   origin: string;
+  waitUntil: (work: Promise<void>) => void;
 }>();
 
 export function withWorkerStorage<T>(
   env: Cloudflare.Env,
   request: Request,
+  context: ExecutionContext,
   run: () => T,
 ): T {
-  return workerBindings.run({ env, origin: new URL(request.url).origin }, run);
+  return workerBindings.run({
+    env,
+    origin: new URL(request.url).origin,
+    waitUntil: (work) => context.waitUntil(work),
+  }, run);
 }
 
 export const workerOrigin = () => workerBindings.getStore()?.origin;
+
+export function scheduleWorkerTask(task: () => Promise<void>) {
+  const bindings = workerBindings.getStore();
+  if (!bindings) return false;
+  bindings.waitUntil(task());
+  return true;
+}
 
 export function runtimeSetting(name: string) {
   const bindings = workerBindings.getStore()?.env as

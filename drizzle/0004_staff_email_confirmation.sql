@@ -1,0 +1,1 @@
+ALTER TABLE `staff_credentials` ADD `email_status` text DEFAULT 'manual' NOT NULL;

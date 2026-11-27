@@ -15,10 +15,23 @@ import {
   ChevronDown,
   Mail,
   Plus,
+  Users,
+  Lightbulb,
+  HeartHandshake,
+  GraduationCap,
+  BriefcaseBusiness,
+  Megaphone,
+  type LucideIcon,
 } from "lucide-react";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
+import { ChoiceField } from "./ChoiceField";
+import { ImpactNumber } from "./ImpactNumber";
+import { InitiativeGallery } from "./InitiativeGallery";
+import { PublicImage } from "./PublicImage";
+import AboutStory from "./AboutStory";
 import { useRevealFallback } from "../hooks/use-reveal-fallback";
+import { enquiryTypes } from "../lib/enquiry";
 import {
   FaFacebookF,
   FaInstagram,
@@ -40,6 +53,21 @@ const socialIcons = {
   youtube: FaYoutube,
   tiktok: FaTiktok,
 };
+const focusIcons = [BookOpen, ShieldCheck, Fingerprint, Users, Lightbulb];
+const contactOpportunityIcons: Partial<Record<string, LucideIcon>> = {
+  volunteer: HeartHandshake,
+  trainer: GraduationCap,
+  advocate: ShieldCheck,
+  "corporate-partners": BriefcaseBusiness,
+  "community-partners": Users,
+  "academic-partners": BookOpen,
+  "media-partners": Megaphone,
+};
+const contactGroupIds = new Set([
+  "individual-contributions",
+  "organisational-partnerships",
+  "get-in-touch",
+]);
 const nav = [
   ["", "Home", "ပင်မစာမျက်နှာ"],
   ["initiatives", "Our Initiatives", "ကျွန်ုပ်တို့၏ အစီအစဉ်များ"],
@@ -48,20 +76,17 @@ const nav = [
   ["contact", "Work With Us", "ကျွန်ုပ်တို့နှင့် ပူးပေါင်းရန်"],
 ];
 const editorialHeroes: Partial<
-  Record<string, { label: [string, string]; image: string; alt: string }>
+  Record<string, { image: string; alt: string }>
 > = {
   initiatives: {
-    label: ["OUR INITIATIVES", "ကျွန်ုပ်တို့၏ အစီအစဉ်များ"],
     image: "/brand/c2-02.webp",
     alt: "C2, the red Way Way Shaung mascot, wearing an orange hat",
   },
   impact: {
-    label: ["OUR IMPACT", "အကျိုးသက်ရောက်မှု"],
     image: "/images/learning.webp",
     alt: "Students sharing ideas around a laptop",
   },
   about: {
-    label: ["ABOUT CLICK CROSS INITIATIVE", "ကျွန်ုပ်တို့အကြောင်း"],
     image: "/images/community.webp",
     alt: "Friends sitting together by the water with their arms around one another",
   },
@@ -234,10 +259,10 @@ export default function Website({
     (section) => section.display === "testimonial" && tr(section.body).trim(),
   );
   const Arrow = () => <ArrowUpRight size={18} aria-hidden="true" />;
-  const sectionExtras = (section: Section) => (
+  const sectionExtras = (section: Section, linkClass = "text-link") => (
     <>
       {section.image && (
-        <img
+        <PublicImage
           className="section-image"
           src={section.image}
           alt={tr(section.heading)}
@@ -245,27 +270,76 @@ export default function Website({
         />
       )}
       {section.href && tr(section.cta) && (
-        <a className="text-link" href={contentHref(section.href)}>
-          {tr(section.cta)}
+        <a className={linkClass} href={contentHref(section.href)}>
+          <span>{tr(section.cta)}</span>
           <Arrow />
         </a>
       )}
     </>
   );
   const additionalSections = (items: Section[]) =>
-    items.map((section) => (
-      <section
-        className="section-pad custom-section"
-        id={section.id}
-        key={section.id}
-      >
-        <h2>{tr(section.heading)}</h2>
-        {tr(section.body) && (
-          <p className="editorial-body">{tr(section.body)}</p>
-        )}
-        {sectionExtras(section)}
-      </section>
-    ));
+    items.map((section) => {
+      const body = tr(section.body);
+      if (pageId === "home" && section.id === "coverage") {
+        const myanmar = ui("Myanmar", "မြန်မာ");
+        const thailand = ui("Thailand", "ထိုင်း");
+        return (
+          <section className="coverage-section" id={section.id} key={section.id} aria-labelledby="coverage-title">
+            <div className="coverage-copy">
+              <h2 id="coverage-title">{tr(section.heading)}</h2>
+              {body && <p className="editorial-body">{body}</p>}
+              <ul className="coverage-legend" role="list">
+                <li><span aria-hidden="true" />{myanmar}</li>
+                <li><span aria-hidden="true" />{thailand}</li>
+              </ul>
+              {sectionExtras(section)}
+            </div>
+            {/* Globe boundaries use Natural Earth 1:50m Admin 0 data, version 5.1.2. */}
+            <PublicImage
+              className="coverage-globe"
+              src="/images/implementation-globe.webp"
+              alt=""
+              width={1280}
+              height={1152}
+              loading="lazy"
+            />
+          </section>
+        );
+      }
+      const [intro, ...focusAreas] =
+        pageId === "home" && section.id === "focus"
+          ? body.split(/\n[\t \r]*\n/).map((paragraph) => paragraph.trim()).filter(Boolean)
+          : [body];
+
+      return (
+        <section
+          className={`section-pad custom-section${focusAreas.length ? " focus-section" : ""}`}
+          id={section.id}
+          key={section.id}
+        >
+          <div className="custom-section-copy">
+            <h2>{tr(section.heading)}</h2>
+            {intro && <p className="editorial-body">{intro}</p>}
+          </div>
+          {focusAreas.length > 0 && (
+            <ul className="focus-areas" role="list">
+              {focusAreas.map((area, index) => {
+                const Icon = focusIcons[index] ?? Lightbulb;
+                return (
+                  <li key={`${index}-${area}`}>
+                    <span className="focus-icon" aria-hidden="true">
+                      <Icon size={24} strokeWidth={1.75} />
+                    </span>
+                    <span>{area}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {sectionExtras(section)}
+        </section>
+      );
+    });
   const editorialRows = (items: Section[]) =>
     items.length > 0 && (
       <section className="section-pad editorial-sections brief-editorial">
@@ -280,6 +354,87 @@ export default function Website({
         ))}
       </section>
     );
+  const contactOpportunities = (items: Section[]) => {
+    let group: { intro?: Section; cards: Section[] } = { cards: [] };
+    const groups = [group];
+    for (const item of items) {
+      if (contactGroupIds.has(item.id)) {
+        group = { intro: item, cards: [] };
+        groups.push(group);
+      } else {
+        group.cards.push(item);
+      }
+    }
+
+    return (
+      items.length > 0 && (
+        <div className="section-pad contact-opportunities">
+          {groups
+            .filter(({ intro, cards }) => intro || cards.length)
+            .map(({ intro, cards }) => {
+              const isEnquiry = intro?.id === "get-in-touch";
+              const heading = intro ? tr(intro.heading) : "";
+              return (
+                <section
+                  className="contact-opportunity-group"
+                  data-tone={
+                    isEnquiry
+                      ? "enquiry"
+                      : intro?.id === "organisational-partnerships"
+                        ? "warm"
+                        : "slate"
+                  }
+                  aria-labelledby={intro ? `${intro.id}-heading` : undefined}
+                  key={intro?.id ?? "other-opportunities"}
+                >
+                  {intro && (
+                    <div className="contact-opportunity-heading" id={intro.id}>
+                      <h2 id={`${intro.id}-heading`}>
+                        {intro.id === "individual-contributions"
+                          ? heading.replace(/^A\.\s+/, "")
+                          : heading}
+                      </h2>
+                      {tr(intro.body) && (
+                        <p className="editorial-body">{tr(intro.body)}</p>
+                      )}
+                      {sectionExtras(intro, "button navy")}
+                    </div>
+                  )}
+                  {cards.length > 0 && (
+                    <div className="contact-opportunity-grid">
+                      {cards.map((item) => {
+                        const Icon =
+                          contactOpportunityIcons[item.id] ?? HeartHandshake;
+                        const Title = intro ? "h3" : "h2";
+                        return (
+                          <article
+                            className="contact-opportunity"
+                            id={item.id}
+                            key={item.id}
+                          >
+                            <span
+                              className="contact-opportunity-icon"
+                              aria-hidden="true"
+                            >
+                              <Icon size={24} strokeWidth={1.75} />
+                            </span>
+                            <Title>{tr(item.heading)}</Title>
+                            {tr(item.body) && (
+                              <p className="editorial-body">{tr(item.body)}</p>
+                            )}
+                            {sectionExtras(item)}
+                          </article>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+        </div>
+      )
+    );
+  };
   const pageLink = page?.url && page.kind === "page" && page.id !== "home" && (
     <a className="button navy page-outbound" href={page.url}>
       {ui("Learn more", "ပိုမိုလေ့လာရန်")}
@@ -288,12 +443,11 @@ export default function Website({
   );
   const editorialHero = page && heroDesign && (
     <section
-      className={`editorial-hero editorial-hero-${pageId}`}
+      className={`editorial-hero editorial-hero-${pageId}${page.image ? " editorial-hero-custom" : ""}`}
       aria-labelledby="page-title"
     >
       <div className="editorial-hero-frame">
         <div className="editorial-hero-copy">
-          <span className="eyebrow">{ui(...heroDesign.label)}</span>
           <h1 id="page-title">{tr(page.title)}</h1>
           <p>{tr(page.description)}</p>
           {pageLink}
@@ -305,7 +459,7 @@ export default function Website({
               : "editorial-hero-art"
           }
         >
-          <img
+          <PublicImage
             src={page.image || heroDesign.image}
             alt={page.image ? page.alt : heroDesign.alt}
             fetchPriority="high"
@@ -340,8 +494,9 @@ export default function Website({
     return (
       <a
         key={item.id}
-        className="initiative-card"
+        className={`initiative-card${image && !mascot ? " initiative-card-artwork" : ""}`}
         href={href(`initiatives/${item.id}`)}
+        draggable={false}
       >
         <div
           className={
@@ -352,7 +507,7 @@ export default function Website({
                 : "initiative-visual"
           }
         >
-          {image && <img src={image} alt={alt || ""} loading="lazy" />}
+          {image && <PublicImage src={image} alt={alt || ""} loading="lazy" />}
         </div>
         <div className="card-top">{statusBadge(item.status)}</div>
         <div className="initiative-caption">
@@ -368,13 +523,7 @@ export default function Website({
     );
   };
   const initiativeGallery = (items: Content[]) => (
-    <div className="initiative-gallery">
-      {Array.from({ length: Math.ceil(items.length / 2) }, (_, row) => (
-        <div className="initiative-grid" key={items[row * 2].id}>
-          {items.slice(row * 2, row * 2 + 2).map(initiativeCard)}
-        </div>
-      ))}
-    </div>
+    <InitiativeGallery cards={items.map(initiativeCard)} />
   );
   const closingSection = content
     .find((c) => c.id === "home")
@@ -386,7 +535,7 @@ export default function Website({
           <h2>{tr(section.heading)}</h2>
           {tr(section.body) && <p>{tr(section.body)}</p>}
           {section.image && (
-            <img
+            <PublicImage
               className="section-image"
               src={section.image}
               alt={tr(section.heading)}
@@ -431,8 +580,8 @@ export default function Website({
         )}
       {impactPage && (
         <section className="impact-preview section-pad">
-          <figure className="editorial-photo">
-            <img
+          <figure className={`editorial-photo${impactPage.image ? " editorial-photo-custom" : ""}`}>
+            <PublicImage
               src={impactPage.image || "/images/learning.webp"}
               alt={
                 impactPage.alt || "Students learning together around a laptop"
@@ -444,7 +593,6 @@ export default function Website({
             )}
           </figure>
           <div>
-            <span className="eyebrow">{ui("OUR IMPACT", "အကျိုးသက်ရောက်မှု")}</span>
             <h2>{tr(impactPage.title)}</h2>
             <p>{tr(impactPage.description)}</p>
             <a className="button navy" href={href("impact")}>
@@ -463,7 +611,7 @@ export default function Website({
     <div className="metrics-grid">
       {impactMetrics.map((metric) => (
         <article key={metric.id}>
-          <span className="metric">{metric.value}</span>
+          {metric.value && <ImpactNumber value={metric.value} />}
           <h3>{tr(metric.title)}</h3>
           <p>{tr(metric.description)}</p>
           {metric.period &&
@@ -527,8 +675,9 @@ export default function Website({
       </a>
       <div className={"nav-shell" + (overHero ? " over-hero" : "")}>
         <header className={"header" + (scrolled ? " glass" : "")}>
-          <a href={href()} aria-label={siteTitle} className="brand">
-            <img
+          <a href={href()} aria-label={siteTitle} className="brand" draggable={false}>
+            <PublicImage
+              className={settings.image && settings.image !== "/brand/cci-logo.webp" ? "brand-image-custom" : undefined}
               src={settings.image || "/brand/cci-logo.webp"}
               alt={settings.alt || "Click Cross Initiative"}
             />
@@ -581,11 +730,10 @@ export default function Website({
         className={pageId === "home" ? "campaign-home" : undefined}
       >
         {page?.image && page.kind === "page" && !overHero && (
-          <img className="page-cover" src={page.image} alt={page.alt} />
+          <PublicImage className="page-cover" src={page.image} alt={page.alt} />
         )}
         {!page ? (
           <section className="page-hero">
-            <span className="eyebrow">404 / PAGE NOT FOUND</span>
             <h1>Let’s get you back on track.</h1>
             <a className="button navy" href={href()}>
               Back to Home
@@ -596,8 +744,8 @@ export default function Website({
           <>
             <div className="campaign-track">
               <section className="hero photo-hero">
-                <img
-                  className="hero-photograph"
+                <PublicImage
+                  className={`hero-photograph${page.image ? " hero-photograph-custom" : ""}`}
                   src={page.image || "/images/community.webp"}
                   alt={
                     page.image
@@ -701,7 +849,6 @@ export default function Website({
                 <a className="breadcrumb" href={href("initiatives")}>
                   Our Initiatives <ArrowRight size={14} />
                 </a>
-                <span className="eyebrow">A CLICK CROSS INITIATIVE</span>
                 {statusBadge(page.status)}
                 <h1>{tr(page.title)}</h1>
                 <p>
@@ -728,7 +875,7 @@ export default function Website({
               </div>
               {page.image ? (
                 <div className="detail-mascot">
-                  <img src={page.image} alt={page.alt} />
+                  <PublicImage src={page.image} alt={page.alt} />
                   {page.id === "way-way-shaung" && (
                     <span>
                       Meet C2 <small>Pronounced “Si Thu”</small>
@@ -801,7 +948,7 @@ export default function Website({
                 <ul className="partner-grid">
                   {partners.map((partner) => {
                     const logo = (
-                      <img
+                      <PublicImage
                         src={partner.image}
                         alt={tr(partner.heading)}
                         loading="lazy"
@@ -810,7 +957,7 @@ export default function Website({
                     return (
                       <li key={partner.id}>
                         {partner.href ? (
-                          <a href={partner.href} rel="noopener noreferrer">
+                          <a href={partner.href} rel="noopener noreferrer" draggable={false}>
                             {logo}
                           </a>
                         ) : (
@@ -854,9 +1001,6 @@ export default function Website({
               aria-labelledby="page-title"
             >
               <div className="editorial-hero-copy">
-                <span className="eyebrow">
-                  {ui("WORK WITH US", "ကျွန်ုပ်တို့နှင့် ပူးပေါင်းရန်")}
-                </span>
                 <h1 id="page-title">{tr(page.title)}</h1>
                 <p className="editorial-body">{tr(page.description)}</p>
                 {pageLink}
@@ -880,8 +1024,8 @@ export default function Website({
                     </a>
                   )}
                 </div>
-                <figure className="editorial-hero-art contact-hero-photo">
-                  <img
+                <figure className={`editorial-hero-art contact-hero-photo${page.image ? " contact-hero-photo-custom" : ""}`}>
+                  <PublicImage
                     src={page.image || "/images/contact-desk.webp"}
                     alt={
                       page.image
@@ -925,41 +1069,84 @@ export default function Website({
                 ) : (
                   <>
                     <fieldset disabled={!acceptsEnquiries || formState.busy}>
-                      <label>
-                        {ui("Full name", "အမည်အပြည့်အစုံ")}
-                        <Input
-                          name="name"
-                          autoComplete="name"
+                      <div className="enquiry-form-group enquiry-type-field">
+                        <span>
+                          {ui("Inquiry type", "ဆက်သွယ်ရသည့် အကြောင်းအရာ")}
+                        </span>
+                        <ChoiceField
+                          name="enquiryType"
+                          label={ui("Inquiry type", "ဆက်သွယ်ရသည့် အကြောင်းအရာ")}
+                          defaultValue="general"
+                          options={Object.entries(enquiryTypes).map(([value, label]) => ({
+                            value,
+                            label: tr(label),
+                          }))}
                           required
-                          maxLength={100}
-                          placeholder={ui("Your full name", "သင့်အမည်အပြည့်အစုံ")}
+                          disabled={!acceptsEnquiries || formState.busy}
                         />
-                      </label>
-                      <label>
-                        {ui("Email address", "အီးမေးလ်လိပ်စာ")}
-                        <Input
-                          name="email"
-                          type="email"
-                          autoComplete="email"
-                          required
-                          maxLength={254}
-                          placeholder="you@example.com"
-                        />
-                      </label>
-                      <label>
-                        {ui("Enquiry subject", "ဆက်သွယ်သည့် အကြောင်းအရာ")}
-                        <Input
-                          name="subject"
-                          required
-                          maxLength={200}
-                          placeholder={ui(
-                            "Partnership, volunteering, or a general enquiry",
-                            "ပူးပေါင်းဆောင်ရွက်မှု၊ စေတနာ့ဝန်ထမ်း သို့မဟုတ် အထွေထွေ မေးမြန်းမှု",
-                          )}
-                        />
-                      </label>
-                      <label>
-                        {ui("Your message", "သင်ပေးပို့လိုသည့် အကြောင်းအရာ")}
+                      </div>
+                      <fieldset className="enquiry-form-group">
+                        <legend>
+                          {ui("Contact information", "ဆက်သွယ်ရန် အချက်အလက်များ")}
+                        </legend>
+                        <div className="enquiry-contact-fields">
+                          <label>
+                            <span>
+                              {ui("Full name", "အမည်အပြည့်အစုံ")}{" "}
+                              <span aria-hidden="true">*</span>
+                            </span>
+                            <Input
+                              name="name"
+                              autoComplete="name"
+                              required
+                              maxLength={100}
+                              placeholder={ui("Your full name", "သင့်အမည်အပြည့်အစုံ")}
+                            />
+                          </label>
+                          <label>
+                            <span>
+                              {ui("Email address", "အီးမေးလ်လိပ်စာ")}{" "}
+                              <span aria-hidden="true">*</span>
+                            </span>
+                            <Input
+                              name="email"
+                              type="email"
+                              autoComplete="email"
+                              required
+                              maxLength={254}
+                              placeholder="name@example.com"
+                            />
+                          </label>
+                          <label>
+                            {ui("Organisation / Institution", "အဖွဲ့အစည်း / ဌာန")}
+                            <Input
+                              name="organisation"
+                              autoComplete="organization"
+                              maxLength={160}
+                              placeholder={ui(
+                                "Organisation name",
+                                "အဖွဲ့အစည်းအမည်",
+                              )}
+                            />
+                          </label>
+                          <label>
+                            {ui("Country / Location", "နိုင်ငံ / တည်နေရာ")}
+                            <Input
+                              name="location"
+                              maxLength={160}
+                              placeholder={ui(
+                                "e.g. Myanmar, Thailand",
+                                "ဥပမာ မြန်မာ၊ ထိုင်း",
+                              )}
+                            />
+                          </label>
+                        </div>
+                      </fieldset>
+                      <label className="enquiry-message-field">
+                        <span>
+                          {ui("Your message", "သင်ပေးပို့လိုသည့် အကြောင်းအရာ")}{" "}
+                          <span aria-hidden="true">*</span>
+                        </span>
                         <Textarea
                           name="message"
                           required
@@ -986,9 +1173,14 @@ export default function Website({
                             "I confirm this submission contains only test data."
                           ) : (
                             <>
-                              I agree to the{" "}
-                              <a href={href("privacy")}>Privacy Policy</a> and
-                              the processing of my enquiry.
+                              {ui("I agree to the ", "ကျွန်ုပ်သည် ")}
+                              <a href={href("privacy")}>
+                                {ui("Privacy Policy", "ကိုယ်ရေးအချက်အလက် မူဝါဒ")}
+                              </a>
+                              {ui(
+                                " and the processing of my enquiry.",
+                                " နှင့် မေးမြန်းချက်ကို ဆောင်ရွက်ပေးခြင်းအား သဘောတူပါသည်။",
+                              )}
                             </>
                           )}
                         </span>
@@ -1015,18 +1207,25 @@ export default function Website({
                 )}
               </form>
             </section>
-            {editorialRows(sections)}
+            {contactOpportunities(sections)}
           </>
         ) : (
           <>
             {editorialHero ?? (
               <section className="page-hero compact">
-                <span className="eyebrow">YOUR PRIVACY</span>
                 <h1>{tr(page.title)}</h1>
                 <p>{tr(page.description)}</p>
                 {pageLink}
               </section>
             )}
+            {pageId === "about" ? (
+              <AboutStory
+                sections={sections}
+                translate={tr}
+                linkFor={contentHref}
+                navigationLabel={ui("About this organization", "အဖွဲ့အစည်းအကြောင်း")}
+              />
+            ) : (
             <section
               className={`section-pad editorial-sections ${pageId === "privacy" ? "privacy-content" : ""}`}
             >
@@ -1036,40 +1235,26 @@ export default function Website({
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   <h2>{tr(s.heading)}</h2>
-                  <p className="editorial-body">{tr(s.body)}</p>
-                  {sectionExtras(s)}
+                  <div className="editorial-section-copy">
+                    {tr(s.body) && (
+                      <p className="editorial-body">{tr(s.body)}</p>
+                    )}
+                    {sectionExtras(s, "button navy")}
+                  </div>
                 </article>
               ))}
-              {pageId === "about" &&
-                !sections.some((section) => section.id === "values") && (
-                  <div className="values-panel">
-                    <span className="eyebrow">OUR FOCUS</span>
-                    {[
-                      ["01", "Scam awareness", "Recognizing online risks."],
-                      [
-                        "02",
-                        "Digital safety",
-                        "Building more confident digital lives.",
-                      ],
-                      ["03", "Education", "Making space to learn and share."],
-                    ].map(([n, title, desc]) => (
-                      <div key={n}>
-                        <span>{n}</span>
-                        <h3>{title}</h3>
-                        <p>{desc}</p>
-                        <Arrow />
-                      </div>
-                    ))}
-                  </div>
-                )}
               {pageId === "impact" && metricsGrid}
               {pageId === "impact" && publishedIds.has("initiatives") && (
-                <a className="button accent" href={href("initiatives")}>
-                  Explore Our Initiatives
+                <a
+                  className="button accent impact-initiatives-link"
+                  href={href("initiatives")}
+                >
+                  {ui("Explore Our Initiatives", "ကျွန်ုပ်တို့၏ အစီအစဉ်များ")}
                   <Arrow />
                 </a>
               )}
             </section>
+            )}
             {pageId !== "privacy" && closing()}
           </>
         )}
@@ -1081,8 +1266,9 @@ export default function Website({
       </main>
       <footer className="footer">
         <div className="footer-main">
-          <a className="brand" href={href()}>
-            <img
+          <a className="brand" href={href()} draggable={false}>
+            <PublicImage
+              className={settings.image && settings.image !== "/brand/cci-logo.webp" ? "brand-image-custom" : undefined}
               src={settings.image || "/brand/cci-logo.webp"}
               alt={settings.alt || "Click Cross Initiative"}
             />

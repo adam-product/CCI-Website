@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, uniqueIndex } from "drizzle-orm/sqlite-core";
 export const content = sqliteTable("content", {
   id: text("id").primaryKey(),
   kind: text("kind").notNull(),
@@ -21,12 +21,18 @@ export const staffCredentials = sqliteTable("staff_credentials", {
   sessionHash: text("session_hash"),
   sessionUserId: text("session_user_id"),
   sessionExpiresAt: integer("session_expires_at"),
-});
+  resetTokenHash: text("reset_token_hash"),
+  resetExpiresAt: integer("reset_expires_at"),
+  emailStatus: text("email_status").notNull().default("manual"),
+}, (table) => [uniqueIndex("staff_reset_token_hash").on(table.resetTokenHash)]);
 export const enquiries = sqliteTable("enquiries", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull(),
   subject: text("subject").notNull(),
+  enquiryType: text("enquiry_type"),
+  organisation: text("organisation"),
+  location: text("location"),
   message: text("message").notNull(),
   status: text("status").notNull().default("New"),
   notes: text("notes").notNull().default(""),

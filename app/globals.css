@@ -971,14 +971,14 @@ input[type="file"] {
   padding-bottom: 60px;
   margin-bottom: 60px;
 }
-.editorial-sections > article > p {
+.editorial-section-copy > p {
   color: var(--muted);
   font-size: 15px;
   white-space: pre-line;
 }
 .section-image {
   max-height: 420px;
-  object-fit: cover;
+  object-fit: contain;
   width: 100%;
   border-radius: 8px;
   grid-column: 2/-1;
@@ -1537,9 +1537,6 @@ td strong {
   flex: 1;
   min-width: 170px;
 }
-.upload-panel .button {
-  align-self: flex-end;
-}
 .upload-panel input {
   font-size: 11px;
 }
@@ -1625,37 +1622,6 @@ td strong {
   justify-content: flex-end;
   gap: 12px;
   margin-top: 30px;
-}
-.admin-login {
-  background: var(--cream);
-  min-height: 100vh;
-  padding: 45px 8%;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-.admin-login > .brand {
-  width: 220px;
-}
-.admin-login > div {
-  max-width: 600px;
-  margin: 90px 0 70px;
-}
-.admin-login h1 {
-  font-size: 60px;
-  margin: 25px 0;
-}
-.admin-login p {
-  font-size: 14px;
-  color: var(--muted);
-  max-width: 470px;
-}
-.admin-login small {
-  display: block;
-  max-width: 420px;
-  font-size: 10px;
-  color: #7d8c96;
-  margin-top: 25px;
 }
 @media (min-width: 1600px) {
   .hero {
@@ -2363,7 +2329,7 @@ td strong {
   .editorial-sections h2 {
     font-size: 32px;
   }
-  .editorial-sections > article > p {
+  .editorial-section-copy > p {
     font-size: 13px;
     margin: 0;
   }
@@ -2533,21 +2499,6 @@ td strong {
   .modal p {
     font-size: 12px;
   }
-  .admin-login {
-    padding: 30px 7%;
-  }
-  .admin-login > .brand {
-    width: 190px;
-  }
-  .admin-login > div {
-    margin: 70px 0 50px;
-  }
-  .admin-login h1 {
-    font-size: 43px;
-  }
-  .admin-login p {
-    font-size: 13px;
-  }
   .sidebar-bottom small {
     font-size: 9px;
     max-width: 145px;
@@ -2569,7 +2520,7 @@ td strong {
 .page-cover {
   width: 100%;
   max-height: 500px;
-  object-fit: cover;
+  object-fit: contain;
 }
 .custom-section h2 {
   margin-bottom: 22px;
@@ -2582,7 +2533,7 @@ td strong {
 .custom-section img {
   width: 100%;
   max-height: 500px;
-  object-fit: cover;
+  object-fit: contain;
   margin: 25px 0;
 }
 .seo-fields {

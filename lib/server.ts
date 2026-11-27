@@ -160,10 +160,12 @@ export class HttpError extends Error {
     super(message);
   }
 }
-export const auditStatement = (actor: string, action: string, target: string) =>
+export const auditStatement = (actor: string, action: string, target: string, afterChange = false) =>
   database()
     .prepare(
-      "INSERT INTO audit(id,actor,action,target,created_at) VALUES (?,?,?,?,?)",
+      afterChange
+        ? "INSERT INTO audit(id,actor,action,target,created_at) SELECT ?,?,?,?,? WHERE changes() > 0"
+        : "INSERT INTO audit(id,actor,action,target,created_at) VALUES (?,?,?,?,?)",
     )
     .bind(crypto.randomUUID(), actor, action, target, new Date().toISOString());
 export async function rateLimit(key: string, max: number, seconds: number) {
@@ -228,14 +230,12 @@ export function validateContent(c: any) {
     );
   if (c.secondaryUrl && !safeURL(c.secondaryUrl))
     throw new HttpError(400, "Invalid secondary link.");
-  if (
-    !c ||
-    !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c.id) ||
-    !["page", "initiative", "impact", "settings"].includes(c.kind)
-  )
+  if (!["page", "initiative", "impact", "settings"].includes(c.kind))
     throw new HttpError(400, "Invalid content record.");
+  if (!c.title.en.trim()) throw new HttpError(400, "Enter an English title before saving.");
+  if (typeof c.id !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c.id))
+    throw new HttpError(400, "Use a URL slug with letters, numbers, or hyphens, such as way-way-shaung.");
   if (
-    !c.title?.en?.trim() ||
     c.title.en.length > 200 ||
     c.title.my.length > 500 ||
     c.description.en.length > 5000 ||

@@ -1,7 +1,10 @@
 import { clientAddress, mediaStore, mediaUploadLimit, requestOrigin } from "../../../lib/runtime-storage";
-import { textFor } from "../../../lib/content";
+import { initiativeSlug, textFor } from "../../../lib/content";
+import { enquiryTypes, isEnquiryType } from "../../../lib/enquiry";
 import {
   lockStaffPortal,
+  requestStaffPasswordReset,
+  resetStaffPassword,
   saveStaffAccess,
   unlockStaffPortal,
 } from "../../../lib/staff-auth";
@@ -55,6 +58,12 @@ async function handle(req: Request, { params }: any) {
       await lockStaffPortal(req);
       return json({ ok: true }, 200, portalCookie());
     }
+    if (key === "staff/forgot-password" && req.method === "POST")
+      return json(await requestStaffPasswordReset(req), 202);
+    if (key === "staff/reset-password" && req.method === "POST")
+      return json(await resetStaffPassword(req), 200, portalCookie());
+    if (key === "staff/accept-invitation" && req.method === "POST")
+      return json(await resetStaffPassword(req, "invite"), 200, portalCookie());
     if (path[0] === "media-file" && req.method === "GET") {
       const item: any = await db
         .prepare("SELECT * FROM media WHERE id=?")
@@ -86,6 +95,8 @@ async function handle(req: Request, { params }: any) {
     ) {
       const isTest = key === "contact-test";
       const body = (await req.json()) as any;
+      if (!body || typeof body !== "object" || Array.isArray(body))
+        throw new HttpError(400, "Enter valid enquiry details.");
       let confirmation = "";
       if (isTest) {
         const staff = await authorize("enquiries");
@@ -104,23 +115,30 @@ async function handle(req: Request, { params }: any) {
       }
       if (body.website)
         throw new HttpError(400, "Unable to send this enquiry.");
+      const enquiryType: unknown = body.enquiryType;
+      if (enquiryType !== undefined && !isEnquiryType(enquiryType))
+        throw new HttpError(400, "Choose a valid inquiry type.");
+      const subject = enquiryType === undefined ? body.subject : enquiryTypes[enquiryType].en;
       for (const [field, max] of Object.entries({
         name: 100,
         email: 254,
         subject: 200,
         message: 5000,
-      }))
+      })) {
+        const value = field === "subject" ? subject : body[field];
         if (
-          typeof body[field] !== "string" ||
-          !body[field].trim() ||
-          body[field].length > max
+          typeof value !== "string" || !value.trim() || value.length > max
         )
           throw new HttpError(
             400,
             "Please complete all fields within the displayed limits.",
           );
+      }
+      for (const field of ["organisation", "location"])
+        if (body[field] !== undefined && (typeof body[field] !== "string" || body[field].length > 160))
+          throw new HttpError(400, "Organisation and location can have up to 160 characters each.");
       if (
-        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email) ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email.trim()) ||
         body.consent !== true
       )
         throw new HttpError(
@@ -132,13 +150,17 @@ async function handle(req: Request, { params }: any) {
       const id = crypto.randomUUID();
       await db
         .prepare(
-          "INSERT INTO enquiries(id,name,email,subject,message,status,notes,created_at) VALUES (?,?,?,?,?,'New','',?)",
+          `INSERT INTO enquiries(id,name,email,subject,enquiry_type,organisation,location,message,status,notes,created_at)
+          VALUES (?,?,?,?,?,?,?,?,'New','',?)`,
         )
         .bind(
           id,
           body.name.trim(),
           body.email.trim(),
-          (isTest ? "[TEST] " : "") + body.subject.trim(),
+          (isTest ? "[TEST] " : "") + subject.trim(),
+          enquiryType ?? null,
+          body.organisation?.trim() || null,
+          body.location?.trim() || null,
           body.message.trim(),
           new Date().toISOString(),
         )
@@ -169,15 +191,29 @@ async function handle(req: Request, { params }: any) {
     if (key === "content" && req.method === "POST") {
       const user = await authorize("edit");
       const b = (await req.json()) as any;
-      const c = validateContent(b.content);
+      const creating = b.version === 0;
+      const submitted = b.content;
+      const c = validateContent(
+        creating && submitted?.kind === "initiative" && typeof submitted.id === "string"
+          ? {
+              ...submitted,
+              id: initiativeSlug(
+                submitted.id.trim() ||
+                  (typeof submitted.title?.en === "string" ? submitted.title.en : ""),
+              ),
+            }
+          : submitted,
+      );
       if (c.kind === "settings") await authorize("settings");
       const old: any = await db
         .prepare("SELECT * FROM content WHERE id=?")
         .bind(c.id)
         .first();
+      if (creating && old)
+        throw new HttpError(409, "That URL slug is already in use. Choose another one.");
       if (old && old.kind !== c.kind)
         throw new HttpError(400, "Content type cannot be changed.");
-      if (old && old.version !== b.version)
+      if (!creating && (!old || old.version !== b.version))
         throw new HttpError(
           409,
           "This record changed in another session. Reload before saving.",
@@ -192,16 +228,21 @@ async function handle(req: Request, { params }: any) {
       else
         stmt = db
           .prepare(
-            "INSERT INTO content(id,kind,draft,published,version,updated_at) VALUES (?,?,?,NULL,1,?)",
+            "INSERT INTO content(id,kind,draft,published,version,updated_at) VALUES (?,?,?,NULL,1,?) ON CONFLICT(id) DO NOTHING",
           )
           .bind(c.id, c.kind, JSON.stringify(c), new Date().toISOString());
       const results = await db.batch([
         stmt,
-        auditStatement(user.email, "Save draft", c.id),
+        auditStatement(user.email, "Save draft", c.id, true),
       ]);
       if (!results[0].meta.changes)
-        throw new HttpError(409, "Content has changed. Reload and try again.");
-      return json({ ok: true });
+        throw new HttpError(
+          409,
+          creating
+            ? "That URL slug is already in use. Choose another one."
+            : "Content has changed. Reload and try again.",
+        );
+      return json({ ok: true, id: c.id });
     }
     if (key === "publish" && req.method === "POST") {
       const user = await authorize("publish");
@@ -261,21 +302,16 @@ async function handle(req: Request, { params }: any) {
           )
           .bind(draft, published, now, b.id, b.version),
         // Log only a committed version transition.
-        db
-          .prepare(
-            "INSERT INTO audit (id,actor,action,target,created_at) SELECT ?,?,?,?,? WHERE changes() > 0",
-          )
-          .bind(
-            crypto.randomUUID(),
-            user.email,
-            statusOnly
-              ? "Update initiative status"
-              : b.unpublish
-                ? "Unpublish"
-                : "Publish",
-            b.id,
-            now,
-          ),
+        auditStatement(
+          user.email,
+          statusOnly
+            ? "Update initiative status"
+            : b.unpublish
+              ? "Unpublish"
+              : "Publish",
+          b.id,
+          true,
+        ),
       ]);
       if (!result.meta.changes)
         throw new HttpError(409, "Reload this record before publishing.");
@@ -412,11 +448,11 @@ async function handle(req: Request, { params }: any) {
         (
           await db
             .prepare(
-              `SELECT staff.email, role, active,
+              `SELECT staff.email, role, active, staff_credentials.email_status,
         CASE WHEN staff_credentials.email IS NOT NULL THEN 1 ELSE 0 END AS has_password
         FROM staff LEFT JOIN staff_credentials USING(email) ORDER BY staff.email`,
             )
-            .all<{ email: string; role: string; active: number; has_password: number }>()
+            .all<{ email: string; role: string; active: number; has_password: number; email_status: string | null }>()
         ).results.map((item) => ({ ...item, managed: isConfiguredAdministrator(item.email) })),
       );
     }

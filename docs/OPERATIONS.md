@@ -48,9 +48,29 @@ Connect the original database and bucket if the operator has direct credentials.
 1. Run `node --experimental-strip-types scripts/create-portal-credential.mjs` in a private interactive terminal.
 2. Set `CCI_ADMIN_EMAIL` to the first administrator’s address and `CCI_ADMIN_PASSWORD_HASH` to the generated hash in protected runtime settings. Publish the configuration before signing in.
 3. Give the temporary password privately to the administrator. They open `/admin` and replace it on first sign-in.
-4. After setup, remove the bootstrap hash from the deployment settings. The account’s permanent credential is stored in D1. Keep the email configured if the account should stay deployment-managed.
+4. After setup, remove the bootstrap hash from the deployment settings. The permanent credential is stored in the CMS database. Keep the email configured if the account should stay deployment-managed.
 
-Use the parallel `CCI_TEST_ADMIN_EMAIL` and `CCI_TEST_ADMIN_PASSWORD_HASH` settings only when a second deployment-managed administrator is needed. For ordinary access, use Staff Access so a Super Administrator can later disable it. Removing a bootstrap hash does not revoke a provisioned account. An operator can rotate a deployment-managed account by arranging a new bootstrap hash and removing only that account’s credential row during an approved maintenance operation.
+Use the parallel `CCI_TEST_ADMIN_EMAIL` and `CCI_TEST_ADMIN_PASSWORD_HASH` settings only when a second deployment-managed administrator is needed. For ordinary access, use Staff Access so a Super Administrator can later disable it. Removing a bootstrap hash does not revoke a provisioned account.
+
+### Staff email invitations and password recovery
+
+Add a domain you control in [Resend](https://resend.com/docs/dashboard/domains/introduction) and verify its DNS records. Keep click tracking off for this sender so invitation and recovery links go straight to the portal. Create a sending-only key scoped to that domain. Keep the key in server configuration and out of Git.
+
+| Server setting | Value |
+| --- | --- |
+| `RESEND_API_KEY` | Sending-only API key |
+| `CCI_MAIL_FROM` | Sender on the verified domain, such as `CCI Staff Portal <staff@notifications.example.org>` |
+| `CCI_SITE_URL` | Public HTTPS site URL |
+
+For Vercel, set these in the project’s Production environment. The prior `CCI_RESET_FROM` name still works. Apply the D1 migrations before releasing the Worker. The Supabase installer applies the corresponding database changes on deployment.
+
+For real email in the local Worker preview, put the same settings in the ignored `.dev.vars` file in the project folder. Use `CCI_SITE_URL=http://127.0.0.1:5173` and open the link on the same computer. In PowerShell, start the preview with the full path to the secrets file:
+
+```powershell
+npm.cmd run start -- --port 5173 --env-file "$PWD\.dev.vars"
+```
+
+For local recovery without email, run `npm run staff:recover:local` in a private terminal from the project folder. Enter the staff email and open the one-time link on the same computer. If the local staff database is empty, the command asks whether you want to create its first Super Administrator. Keep the link private and use it within 20 minutes.
 
 ## Hosted release
 

@@ -25,6 +25,22 @@ create table if not exists cci.enquiries (
   created_at text not null
 );
 
+alter table cci.enquiries
+  add column if not exists enquiry_type text,
+  add column if not exists organisation text,
+  add column if not exists location text;
+
+update cci.content
+set draft = replace(draft, 'The contact form asks for your name, email address, subject, and message.',
+    'The contact form asks for your name, email address, inquiry type, and message. You can also provide your organisation or institution and your country or location.'),
+  published = replace(published, 'The contact form asks for your name, email address, subject, and message.',
+    'The contact form asks for your name, email address, inquiry type, and message. You can also provide your organisation or institution and your country or location.'),
+  version = version + 1
+where id = 'privacy' and (
+  strpos(draft, 'The contact form asks for your name, email address, subject, and message.') > 0
+  or strpos(published, 'The contact form asks for your name, email address, subject, and message.') > 0
+);
+
 create table if not exists cci.media (
   id text primary key,
   name text not null,
@@ -50,6 +66,13 @@ create table if not exists cci.staff_credentials (
 );
 
 create index if not exists staff_session_hash on cci.staff_credentials (session_hash);
+
+alter table cci.staff_credentials
+  add column if not exists reset_token_hash text,
+  add column if not exists reset_expires_at bigint,
+  add column if not exists email_status text not null default 'manual';
+
+create unique index if not exists staff_reset_token_hash on cci.staff_credentials (reset_token_hash);
 
 create table if not exists cci.audit (
   id text primary key,

@@ -4,6 +4,7 @@ import Admin from "../../components/Admin";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { textFor } from "../../lib/content";
+import { staffRecoveryMode } from "../../lib/staff-auth";
 export const dynamic = "force-dynamic";
 export async function generateMetadata({
   params,
@@ -57,7 +58,7 @@ export default async function Page({ params, searchParams }: any) {
   const { path = [] } = await params;
   if (path[0] === "admin") {
     if (path.length > 1) notFound();
-    return <Admin />;
+    return <Admin recoveryMode={staffRecoveryMode()} />;
   }
   const rest = ["en", "my"].includes(path[0]) ? path.slice(1) : path;
   let data = await publicContent();

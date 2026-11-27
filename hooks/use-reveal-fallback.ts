@@ -64,9 +64,10 @@ export function useRevealFallback(pageKey: string, content: Content[]) {
           .initiative-card, .section-image, .editorial-photo,
           .editorial-hero-art:not(.editorial-hero-impact *, .contact-hero-photo), .detail-mascot,
           .lotus-detail-art, .feature-grid > article, .journey article, .partner-grid > li,
-          .testimonial-grid > blockquote, .values-panel > div, .metrics-grid > article):not(:where(
+          .testimonial-grid > blockquote, .values-panel > div, .metrics-grid > article, .contact-opportunity, .focus-areas > li,
+          .coverage-globe, .story-photo, .story-illustration, .story-values-list > li, .story-people > li, .story-timeline > li):not(:where(
           .photo-hero *, .contact-form *, .initiative-card *, .feature-grid article *, .journey article *,
-          .testimonial-grid blockquote *, .values-panel > div *, .metrics-grid article *)),
+          .testimonial-grid blockquote *, .values-panel > div *, .metrics-grid article *, .story-people li *, .story-timeline li *, .contact-opportunity *)),
           #main .contact-form > h2, #main > .page-cover, .footer-main > *`,
       )
       .forEach((element) => observer.observe(element));

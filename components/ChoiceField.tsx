@@ -16,6 +16,7 @@ export function ChoiceField({
   value,
   defaultValue,
   name,
+  required,
   disabled,
   onValueChange,
   compact,
@@ -25,6 +26,7 @@ export function ChoiceField({
   value?: string;
   defaultValue?: string;
   name?: string;
+  required?: boolean;
   disabled?: boolean;
   onValueChange?: (value: string) => void;
   compact?: boolean;
@@ -34,6 +36,7 @@ export function ChoiceField({
       name={name}
       value={value}
       defaultValue={defaultValue}
+      required={required}
       disabled={disabled}
       onValueChange={onValueChange}
     >

@@ -9,6 +9,7 @@ const cookieName = development ? "cci-portal-dev" : "__Host-cci-portal";
 export const portalSessionType = "cci-password-v1";
 export const temporaryPasswordLifetime = 24 * 60 * 60 * 1000;
 export const portalSessionLifetime = 4 * 60 * 60 * 1000;
+export const passwordResetLifetime = 20 * 60 * 1000;
 export const makeTemporaryPassword = () =>
   randomBytes(24).toString("base64url");
 export const makePortalToken = () => randomBytes(32).toString("base64url");
