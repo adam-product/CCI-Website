@@ -30,7 +30,7 @@ import { ImpactNumber } from "./ImpactNumber";
 import { InitiativeGallery } from "./InitiativeGallery";
 import { PublicImage } from "./PublicImage";
 import AboutStory from "./AboutStory";
-import { useRevealFallback } from "../hooks/use-reveal-fallback";
+import { useScrollReveal } from "../hooks/use-scroll-reveal";
 import { enquiryTypes } from "../lib/enquiry";
 import {
   FaFacebookF,
@@ -119,7 +119,7 @@ export default function Website({
   const lang = route[0] === "my" ? "my" : "en";
   const parts = ["en", "my"].includes(route[0]) ? route.slice(1) : route;
   const pageId = parts.at(-1) || "home";
-  useRevealFallback(`${lang}/${pageId}`, content);
+  useScrollReveal(`${lang}/${pageId}`, content);
   const page = content.find(
     (c) => c.id === pageId && (c.kind === "page" || c.kind === "initiative"),
   );

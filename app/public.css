@@ -1428,128 +1428,38 @@ html {
   }
 }
 
-/* Scroll progress drives both edges. Keep compound cards on a single timeline. */
+/* Introductory copy arrives in reading order before scroll reveals take over. */
 @media (prefers-reduced-motion: no-preference) {
-  @supports (animation-timeline: view()) and
-    (animation-range: cover 0% cover 17%) {
-    #main
-      section
-      :is(
-        .eyebrow,
-        h1,
-        h2,
-        h3,
-        h4,
-        p,
-        .breadcrumb,
-        .button,
-        .text-link,
-        .initiative-card,
-        .section-image,
-        .editorial-photo,
-        .editorial-hero-art:not(.editorial-hero-impact *, .contact-hero-photo),
-        .detail-mascot,
-        .lotus-detail-art,
-        .feature-grid > article,
-        .journey article,
-        .partner-grid > li,
-        .testimonial-grid > blockquote,
-        .values-panel > div,
-        .metrics-grid > article,
-        .contact-opportunity,
-        .focus-areas > li,
-        .coverage-globe,
-        .story-photo,
-        .story-illustration,
-        .story-values-list > li,
-        .story-people > li,
-        .story-timeline > li
-      ):not(
-        :where(
-          .photo-hero *,
-          .contact-form *,
-          .initiative-card *,
-          .feature-grid article *,
-          .journey article *,
-          .testimonial-grid blockquote *,
-          .values-panel > div *,
-          .metrics-grid article *,
-          .story-people li *,
-          .story-timeline li *,
-          .contact-opportunity *
-        )
-      ),
-    #main .contact-form > h2,
-    #main > .page-cover,
-    .footer-main > * {
-      animation: section-flow auto linear both;
-      animation-timeline: view(block min(5vh, 42px) 0px);
-      animation-range: cover;
+  #main :is(.editorial-hero-copy, .initiative-detail > div:first-child, .page-hero:not(.initiative-detail, .photo-hero)) {
+    & > :is(.breadcrumb, .status, h1, p, .button) {
+      animation: editorial-arrival 730ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
     }
 
-    #main section :is(.eyebrow, .breadcrumb) {
-      --reveal-distance: 9px;
+    & > h1 {
+      animation-delay: 45ms;
     }
 
-    #main section :is(h1, h2, h3, h4) {
-      --reveal-distance: 22px;
+    & > p {
+      animation-delay: 120ms;
     }
 
-    #main .focus-areas > li:nth-child(even) {
-      --reveal-distance: 26px;
-      animation-range: cover 3% cover 97%;
+    & > .button {
+      animation-delay: 180ms;
     }
 
-    #main .story-chapter :is(.story-photo, .story-illustration, .story-people > li) {
-      --reveal-distance: 25px;
-      --reveal-scale: 0.97;
-      animation-range: cover 1% cover 99%;
+    & > :focus-within {
+      animation: none;
     }
+  }
 
-    #main .story-chapter :is(.story-people, .story-values-list) > li:nth-child(even) {
-      --reveal-distance: 24px;
-      animation-range: cover 4% cover 96%;
+  @keyframes editorial-arrival {
+    from {
+      opacity: 0.28;
+      translate: 0 23px;
     }
-
-    #main
-      :is(
-        .initiative-card,
-        .editorial-photo,
-        .editorial-hero-art,
-        .page-cover,
-        .detail-mascot,
-        .lotus-detail-art,
-        .section-image,
-        .feature-grid > article
-      ) {
-      --reveal-distance: 24px;
-      --reveal-scale: 0.985;
-    }
-
-    #main :is(a, button, article, li, blockquote):focus-within,
-    .footer-main > :focus-within {
-      animation-name: none;
-    }
-
-    @keyframes section-flow {
-      0% {
-        opacity: 0.58;
-        translate: 0 var(--reveal-distance, 16px);
-        scale: var(--reveal-scale, none);
-        animation-timing-function: cubic-bezier(0.22, 0.65, 0.32, 1);
-      }
-      18%,
-      82% {
-        opacity: 1;
-        translate: none;
-        scale: none;
-        animation-timing-function: cubic-bezier(0.55, 0, 0.85, 1);
-      }
-      100% {
-        opacity: 0.7;
-        translate: 0 calc(var(--reveal-distance, 16px) * -0.6);
-        scale: var(--reveal-scale, none);
-      }
+    to {
+      opacity: 1;
+      translate: none;
     }
   }
 }
